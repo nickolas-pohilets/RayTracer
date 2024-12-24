@@ -12,6 +12,7 @@ struct Camera {
     private var viewportCenter: Point3D
     private var viewportU: Vector3D
     private var viewportV: Vector3D
+    private var samplesPerPixel = 20 // Count of random samples for each pixel
 
     init(imageWidth: Int, imageHeight: Int) {
         self.imageWidth = imageWidth
@@ -30,15 +31,24 @@ struct Camera {
         var image = Image(width: imageWidth, height: imageHeight)
         for i in 0..<imageHeight {
             for j in 0..<imageWidth {
-                let pixelCenter = viewportCenter
-                    + ((Double(i) + 0.5) / Double(image.height) - 0.5) * viewportV
-                    + ((Double(j) + 0.5) / Double(image.width) - 0.5) * viewportU
-                let ray = Ray3D(origin: cameraCenter, target: pixelCenter, normalized: true)
-                let colorF = rayColor(ray, world: world)
-                image[i, j] = colorF.asU8
+                var color: ColorF = .zero
+                for _ in 0..<samplesPerPixel {
+                    let ray = getRay(i, j)
+                    color = color + rayColor(ray, world: world)
+                }
+                image[i, j] = (color / Double(samplesPerPixel)).asU8
             }
         }
         return image
+    }
+
+    private func getRay(_ i: Int, _ j: Int) -> Ray3D {
+        let offsetX = Double.random(in: 0..<1)
+        let offsetY = Double.random(in: 0..<1)
+        let pixelSample = viewportCenter
+            + ((Double(i) + offsetY) / Double(imageHeight) - 0.5) * viewportV
+            + ((Double(j) + offsetX) / Double(imageWidth) - 0.5) * viewportU
+        return Ray3D(origin: cameraCenter, target: pixelSample, normalized: true)
     }
 
     private func rayColor(_ ray: Ray3D, world: some Hittable) -> ColorF {

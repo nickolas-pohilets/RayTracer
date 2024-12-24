@@ -19,6 +19,7 @@ public struct Vector3D {
     public static var zero: Self { .init(x: 0, y: 0, z: 0) }
 
     public init(x: Double, y: Double, z: Double) {
+        assert(!x.isNaN && !y.isNaN && !z.isNaN)
         self.x = x
         self.y = y
         self.z = z
