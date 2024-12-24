@@ -36,11 +36,12 @@ extension OutputStream: @retroactive TextOutputStream {
 
 struct Image {
     let width: Int
-    var height: Int { data.count / width }
+    let height: Int
     private var data: [ColorU8]
 
     init(width: Int, height: Int, fillColor: ColorU8 = .black) {
         self.width = width
+        self.height = height
         self.data = [ColorU8].init(repeating: fillColor, count: width * height)
     }
 
@@ -57,7 +58,7 @@ struct Image {
 
     private func checkBounds(_ i: Int, _ j : Int) {
         assert(j >= 0 && j < width)
-        assert(i >= 0 && i * width < data.count)
+        assert(i >= 0 && i < height)
     }
 
     func writePPM<Target: TextOutputStream>(to target: inout Target) {
