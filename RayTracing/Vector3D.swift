@@ -9,6 +9,7 @@ infix operator • : MultiplicationPrecedence
 infix operator ⨯ : MultiplicationPrecedence
 
 public typealias Point3D = Vector3D
+public typealias ColorF = Vector3D
 
 public struct Vector3D {
     public var x: Double
@@ -29,6 +30,11 @@ public struct Vector3D {
 
     public var lengthSquared: Double {
         return self • self
+    }
+
+    public func normalized() -> Self {
+        let L = self.length
+        return .init(x: x / L, y: y / L, z: z / L)
     }
 
     public subscript(_ index: Int) -> Double {
@@ -54,6 +60,9 @@ public struct Vector3D {
     public static func +(_ lhs: Self, _ rhs: Self) -> Self {
         .init(x: lhs.x + rhs.x, y: lhs.y + rhs.y, z: lhs.z + rhs.z)
     }
+    public static func -(_ lhs: Self, _ rhs: Self) -> Self {
+        .init(x: lhs.x - rhs.x, y: lhs.y - rhs.y, z: lhs.z - rhs.z)
+    }
     public static func *(_ lhs: Self, _ rhs: Double) -> Self {
         .init(x: lhs.x * rhs, y: lhs.y * rhs, z: lhs.z * rhs)
     }
@@ -75,4 +84,14 @@ public struct Vector3D {
             z: lhs.x * rhs.y - lhs.y * rhs.x
         )
     }
+}
+
+extension ColorF {
+    var asU8: ColorU8 {
+        .init(r: toU8(x), g: toU8(y), b: toU8(z))
+    }
+}
+
+private func toU8(_ x: Double) -> UInt8 {
+    return UInt8(exactly: ((256.0).nextDown * x).rounded(.down))!
 }
