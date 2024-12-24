@@ -5,11 +5,16 @@
 //  Created by Mykola Pokhylets on 24/12/2024.
 //
 
+public enum Face {
+    case front
+    case back
+}
+
 public struct HitRecord {
     var point: Point3D
     var normal: Vector3D
     var t: Double
-
+    var face: Face
 }
 
 public protocol Hittable {
@@ -38,8 +43,27 @@ public struct Sphere: Hittable {
         let D_4 = b_2 * b_2 - a * c
         if D_4 < 0 { return nil }
         let t = (-b_2 - D_4.squareRoot()) / a
+        if !range.contains(t) { return nil }
         let point = ray[t]
-        let normal = (point - center) / radius
-        return HitRecord(point: point, normal: normal, t: t)
+        var normal = (point - center) / radius
+        var face: Face = .front
+        if normal • ray.direction > 0 {
+            normal = -normal
+            face = .back
+        }
+        return HitRecord(point: point, normal: normal, t: t, face: face)
+    }
+}
+
+extension Array: Hittable where Element == any Hittable {
+    public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
+        var result: HitRecord?
+        for item in self {
+            let itemRange = range.lowerBound..<(result?.t ?? range.upperBound)
+            if let hit = item.hit(ray: ray, range: itemRange) {
+                result = hit
+            }
+        }
+        return result
     }
 }

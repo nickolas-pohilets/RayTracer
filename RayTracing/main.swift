@@ -37,8 +37,13 @@ func makeGradient() -> Image {
     return image
 }
 
+let world: [any Hittable] = [
+    Sphere(center: Point3D(x: 0, y: 0, z: -1), radius: 0.5),
+    Sphere(center: Point3D(x: 0, y: -100.5, z: -1), radius: 100)
+]
+
 func rayColor(_ ray: Ray3D) -> ColorF {
-    if let hit = Sphere(center: Point3D(x: 0, y: 0, z: -1), radius: 0.5).hit(ray: ray, range: 0..<Double.infinity) {
+    if let hit = world.hit(ray: ray, range: 0..<Double.infinity) {
         return 0.5 * (hit.normal + Vector3D(x: 1, y: 1, z: 1))
     }
 
