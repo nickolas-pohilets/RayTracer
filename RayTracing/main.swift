@@ -38,6 +38,10 @@ func makeGradient() -> Image {
 }
 
 func rayColor(_ ray: Ray3D) -> ColorF {
+    if let hit = Sphere(center: Point3D(x: 0, y: 0, z: -1), radius: 0.5).hit(ray: ray, range: 0..<Double.infinity) {
+        return 0.5 * (hit.normal + Vector3D(x: 1, y: 1, z: 1))
+    }
+
     let a = 0.5 * (ray.direction.y + 1.0)
     return (1 - a) * ColorF(x: 1, y: 1, z: 1) + a * ColorF(x: 0.5, y: 0.7, z: 1.0)
 }
@@ -46,6 +50,6 @@ func getURL(_ path: String) -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
 }
 
-try makeGradient().writePPM(to: getURL("results/gradient.ppm"))
+try makeGradient().writePPM(to: getURL("results/sphere-normals.ppm"))
 
 
