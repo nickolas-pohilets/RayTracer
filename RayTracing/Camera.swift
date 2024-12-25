@@ -13,6 +13,7 @@ struct Camera {
     private var viewportU: Vector3D
     private var viewportV: Vector3D
     private var samplesPerPixel = 20 // Count of random samples for each pixel
+    private var maxDepth = 10
 
     init(imageWidth: Int, imageHeight: Int) {
         self.imageWidth = imageWidth
@@ -34,7 +35,7 @@ struct Camera {
                 var color: ColorF = .zero
                 for _ in 0..<samplesPerPixel {
                     let ray = getRay(i, j)
-                    color = color + rayColor(ray, world: world)
+                    color = color + rayColor(ray, world: world, depth: maxDepth)
                 }
                 image[i, j] = (color / Double(samplesPerPixel)).asU8
             }
@@ -51,9 +52,13 @@ struct Camera {
         return Ray3D(origin: cameraCenter, target: pixelSample, normalized: true)
     }
 
-    private func rayColor(_ ray: Ray3D, world: some Hittable) -> ColorF {
+    private func rayColor(_ ray: Ray3D, world: some Hittable, depth: Int) -> ColorF {
+        if depth <= 0 {
+            return .zero
+        }
         if let hit = world.hit(ray: ray, range: 0..<Double.infinity) {
-            return 0.5 * (hit.normal + Vector3D(x: 1, y: 1, z: 1))
+            let direction = Vector3D.randomUnitVector().align(with: hit.normal)
+            return 0.5 * rayColor(Ray3D(origin: hit.point, direction: direction), world: world, depth: depth - 1)
         }
 
         let a = 0.5 * (ray.direction.y + 1.0)

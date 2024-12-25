@@ -85,6 +85,34 @@ public struct Vector3D {
             z: lhs.x * rhs.y - lhs.y * rhs.x
         )
     }
+
+    public static func randomUnitVector<T: RandomNumberGenerator>(
+        using generator: inout T
+    ) -> Self {
+        while (true) {
+            let v = Vector3D(
+                x: .random(in: -1...1, using: &generator),
+                y: .random(in: -1...1, using: &generator),
+                z: .random(in: -1...1, using: &generator)
+            )
+            let lenSq = v.lengthSquared
+            if 1e-160 < lenSq && lenSq <= 1 {
+                return v / lenSq.squareRoot()
+            }
+        }
+    }
+
+    public static func randomUnitVector() -> Self {
+        var g = SystemRandomNumberGenerator()
+        return randomUnitVector(using: &g)
+    }
+
+    public func align(with normal: Vector3D) -> Self {
+        if self • normal < 0 {
+            return -self
+        }
+        return self
+    }
 }
 
 extension ColorF {

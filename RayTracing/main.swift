@@ -15,7 +15,7 @@ private let world: [any Hittable] = [
 private let camera = Camera(imageWidth: 400, imageHeight: 400 * 9 / 16)
 private let image = camera.render(world: world)
 
-try image.writePPM(to: getURL("results/sphere-normals.ppm"))
+try image.writePPM(to: getURL("results/sphere-matte.ppm"))
 
 func getURL(_ path: String) -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
