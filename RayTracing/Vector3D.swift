@@ -119,6 +119,10 @@ extension ColorF {
     var asU8: ColorU8 {
         .init(r: toU8(x), g: toU8(y), b: toU8(z))
     }
+
+    func linearToGamma() -> Self {
+        .init(x: x.squareRoot(), y: y.squareRoot(), z: z.squareRoot())
+    }
 }
 
 private func toU8(_ x: Double) -> UInt8 {

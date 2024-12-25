@@ -37,7 +37,7 @@ struct Camera {
                     let ray = getRay(i, j)
                     color = color + rayColor(ray, world: world, depth: maxDepth)
                 }
-                image[i, j] = (color / Double(samplesPerPixel)).asU8
+                image[i, j] = (color / Double(samplesPerPixel)).linearToGamma() .asU8
             }
         }
         return image
