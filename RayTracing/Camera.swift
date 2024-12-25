@@ -57,7 +57,15 @@ struct Camera {
             return .zero
         }
         if let hit = world.hit(ray: ray, range: 0.001..<Double.infinity) {
-            let direction = Vector3D.randomUnitVector().align(with: hit.normal)
+            let direction: Vector3D
+            while true {
+                let d = Vector3D.randomUnitVector() + hit.normal
+                let lenSq = d.lengthSquared
+                if lenSq > 1e-160 {
+                    direction = d / lenSq.squareRoot()
+                    break
+                }
+            }
             return 0.5 * rayColor(Ray3D(origin: hit.point, direction: direction), world: world, depth: depth - 1)
         }
 
