@@ -46,3 +46,18 @@ public struct Metal: Material {
         return .some((attenuation: albedo, scattered: Ray3D(origin: hit.point, direction: reflected)))
     }
 }
+
+public struct Dielectric: Material {
+    public var refractionIndex: Double
+
+    public init(refractionIndex: Double) {
+        assert(refractionIndex > 0)
+        self.refractionIndex = refractionIndex
+    }
+
+    public func scatter(ray: Ray3D, hit: HitRecord) -> (attenuation: ColorF, scattered: Ray3D)? {
+        let ηRatio = hit.face == .front ? 1.0 / refractionIndex : refractionIndex
+        let refracted = ray.direction.normalized().refractedOrReflected(normal: hit.normal, ηRatio: ηRatio, reflectanceRandom: .random(in: 0..<1))
+        return .some((attenuation: ColorF(x: 1.0, y: 1.0, z: 1.0), scattered: Ray3D(origin: hit.point, direction: refracted)))
+    }
+}

@@ -120,6 +120,25 @@ public struct Vector3D {
     public func reflected(normal: Vector3D) -> Self {
         return self - (2 * (self • normal)) * normal
     }
+
+    public func refracted(normal: Vector3D, ηRatio: Double, reflectanceRandom: Double) -> Vector3D? {
+        let cosθ = max(self • normal, -1.0)
+        let rPerp = ηRatio * (self - cosθ * normal)
+        let rPerpLenSq = rPerp.lengthSquared
+        if rPerpLenSq > 1 { return nil }
+        if reflectanceRandom <= 0 { return nil }
+        if reflectanceRandom < 1 {
+            let reflectance = reflectance(cosθ: cosθ, ηRatio: ηRatio)
+            assert(reflectance >= 0 && reflectance < 1)
+            if reflectance > reflectanceRandom { return nil }
+        }
+        let rParallel = normal * -((1 - rPerpLenSq).squareRoot())
+        return .some(rPerp + rParallel)
+    }
+
+    public func refractedOrReflected(normal: Vector3D, ηRatio: Double, reflectanceRandom: Double) -> Vector3D {
+        return refracted(normal: normal, ηRatio: ηRatio, reflectanceRandom: reflectanceRandom) ?? reflected(normal: normal)
+    }
 }
 
 extension ColorF {
@@ -134,4 +153,14 @@ extension ColorF {
 
 private func toU8(_ x: Double) -> UInt8 {
     return UInt8(exactly: ((256.0).nextDown * x).rounded(.down))!
+}
+
+private func reflectance(cosθ: Double, ηRatio: Double) -> Double {
+    // Use Schlick's approximation for reflectance.
+    let sqR0 = ((1 - ηRatio) / (1 + ηRatio))
+    let R0 = sqR0 * sqR0
+    let x = (1 + cosθ) // In our case cosθ is inverted
+    let x2 = x * x
+    let x4 = x2 * x2
+    return R0 + (1 - R0) * (x4 * x)
 }
