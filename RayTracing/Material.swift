@@ -32,13 +32,17 @@ public struct Lambertian: Material {
 
 public struct Metal: Material {
     public var albedo: ColorF
+    public var fuzz: Double
 
-    public init(albedo: ColorF) {
+    public init(albedo: ColorF, fuzz: Double) {
+        assert((0...1).contains(fuzz))
         self.albedo = albedo
+        self.fuzz = fuzz
     }
 
     public func scatter(ray: Ray3D, hit: HitRecord) -> (attenuation: ColorF, scattered: Ray3D)? {
-        let reflected = ray.direction.reflected(normal: hit.normal)
+        let reflected = ray.direction.reflected(normal: hit.normal).normalized() + fuzz * Vector3D.randomUnitVector()
+        if reflected • hit.normal <= 0 { return nil }
         return .some((attenuation: albedo, scattered: Ray3D(origin: hit.point, direction: reflected)))
     }
 }
