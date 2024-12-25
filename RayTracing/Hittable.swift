@@ -15,6 +15,7 @@ public struct HitRecord {
     var normal: Vector3D
     var t: Double
     var face: Face
+    var material: any Material
 }
 
 public protocol Hittable {
@@ -24,10 +25,12 @@ public protocol Hittable {
 public struct Sphere: Hittable {
     var center: Point3D
     var radius: Double
+    var material: any Material
 
-    public init(center: Point3D, radius: Double) {
+    public init(center: Point3D, radius: Double, material: any Material) {
         self.center = center
         self.radius = radius
+        self.material = material
     }
 
     public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
@@ -51,7 +54,7 @@ public struct Sphere: Hittable {
             normal = -normal
             face = .back
         }
-        return HitRecord(point: point, normal: normal, t: t, face: face)
+        return HitRecord(point: point, normal: normal, t: t, face: face, material: material)
     }
 }
 

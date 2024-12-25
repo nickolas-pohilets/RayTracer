@@ -64,6 +64,9 @@ public struct Vector3D {
     public static func -(_ lhs: Self, _ rhs: Self) -> Self {
         .init(x: lhs.x - rhs.x, y: lhs.y - rhs.y, z: lhs.z - rhs.z)
     }
+    public static func *(_ lhs: Self, _ rhs: Self) -> Self {
+        .init(x: lhs.x * rhs.x, y: lhs.y * rhs.y, z: lhs.z * rhs.z)
+    }
     public static func *(_ lhs: Self, _ rhs: Double) -> Self {
         .init(x: lhs.x * rhs, y: lhs.y * rhs, z: lhs.z * rhs)
     }
@@ -107,11 +110,15 @@ public struct Vector3D {
         return randomUnitVector(using: &g)
     }
 
-    public func align(with normal: Vector3D) -> Self {
+    public func aligned(with normal: Vector3D) -> Self {
         if self • normal < 0 {
             return -self
         }
         return self
+    }
+
+    public func reflected(normal: Vector3D) -> Self {
+        return self - (2 * (self • normal)) * normal
     }
 }
 
