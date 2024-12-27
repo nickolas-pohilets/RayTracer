@@ -113,14 +113,10 @@ public struct Cylinder: Hittable {
 
         var hitRanges: [HitRange] = []
         do {
-            // Coefficients for plane equations
-            let bottomD = -(axis • bottomCenter)
-            let topD = -(axis • topCenter)
-
             let denom = axis • ray.direction
 
-            let db = ob • axis
-            let dt = ot • axis
+            let db = -(ob • axis)
+            let dt = -(ot • axis)
             let tb = db / denom
             let tt = dt / denom
 

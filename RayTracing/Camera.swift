@@ -12,7 +12,7 @@ struct Camera {
     private var viewportCenter: Point3D
     private var viewportU: Vector3D
     private var viewportV: Vector3D
-    private var samplesPerPixel = 20 // Count of random samples for each pixel
+    private var samplesPerPixel = 10 // Count of random samples for each pixel
     private var maxDepth = 10
 
     init(imageWidth: Int, imageHeight: Int) {
