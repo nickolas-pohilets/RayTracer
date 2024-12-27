@@ -5,6 +5,8 @@
 //  Created by Mykola Pokhylets on 24/12/2024.
 //
 
+import Foundation
+
 struct Camera {
     private var imageWidth: Int
     private var imageHeight: Int
@@ -15,17 +17,28 @@ struct Camera {
     private var samplesPerPixel = 10 // Count of random samples for each pixel
     private var maxDepth = 10
 
-    init(imageWidth: Int, imageHeight: Int) {
+    init(
+        imageWidth: Int,
+        imageHeight: Int,
+        verticalFOV: Double = 90,
+        lookFrom: Point3D = Point3D(x: 0, y: 0, z: 0),
+        lookAt: Point3D = Point3D(x: 0, y: 0, z: -1),
+        up: Vector3D = Vector3D(x: 0, y: 1, z: 0)
+    ) {
         self.imageWidth = imageWidth
         self.imageHeight = imageHeight
-        let focalLength = 1.0
-        let viewportHeight = 2.0
+        let focalLength = (lookFrom - lookAt).length
+        let θ = verticalFOV * Double.pi / 180
+        let viewportHeight = 2.0 * tan(θ / 2) * focalLength
         let viewportWidth = viewportHeight * Double(imageWidth) / Double(imageHeight)
-        self.cameraCenter = Point3D.zero
+        self.cameraCenter = lookFrom
 
-        self.viewportU = Vector3D(x: viewportWidth, y: 0, z: 0)
-        self.viewportV = Vector3D(x: 0, y: -viewportHeight, z: 0)
-        self.viewportCenter = cameraCenter - Vector3D(x: 0, y: 0, z: focalLength)
+        let w = (lookFrom - lookAt).normalized()
+        let u = (w ⨯ up).normalized()
+        let v = w ⨯ u
+        self.viewportU = viewportWidth * u
+        self.viewportV = viewportHeight * v
+        self.viewportCenter = lookAt
     }
 
     func render(world: some Hittable) -> Image {
