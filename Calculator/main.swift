@@ -12,10 +12,8 @@ import Foundation
 // Qp = axis * (Q • axis)
 // Qr = Q - Qp
 // Qr • Qr = radius²
-// (Q - Qp) • (Q - Qp) = radius²
-// Q • Q - 2Q • Qp + Qp • Qp = radius²
 
-let axis = Vector("axis") // Normalized
+let axis = Vector("_axis") // Normalized
 let Q = Vector("d") * Number("t") + Vector("oc")
 let Qp = axis * (Q • axis)
 let Qr = Q - Qp

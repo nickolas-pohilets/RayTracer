@@ -30,6 +30,10 @@ struct DotProtuct: Hashable, Comparable, TextOutputStreamable {
         " • ".write(to: &target)
         rhs.write(to: &target)
     }
+
+    var isUnit: Bool {
+        return lhs == rhs && lhs.starts(with: "_")
+    }
 }
 
 struct NumberTerm: Term {
@@ -65,7 +69,7 @@ struct NumberTerm: Term {
         variables = lhs.variables + rhs.variables
         variables.sort()
         dotProducts = lhs.dotProducts + rhs.dotProducts
-        if let dotProduct {
+        if let dotProduct, !dotProduct.isUnit {
             dotProducts.append(dotProduct)
         }
         dotProducts.sort()
