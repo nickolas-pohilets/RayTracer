@@ -110,6 +110,27 @@ public struct Vector3D {
         return randomUnitVector(using: &g)
     }
 
+    public static func randomUnitVector2D<T: RandomNumberGenerator>(
+        using generator: inout T
+    ) -> Self {
+        while (true) {
+            let v = Vector3D(
+                x: .random(in: -1...1, using: &generator),
+                y: .random(in: -1...1, using: &generator),
+                z: 0
+            )
+            let lenSq = v.lengthSquared
+            if 1e-160 < lenSq && lenSq <= 1 {
+                return v / lenSq.squareRoot()
+            }
+        }
+    }
+
+    public static func randomUnitVector2D() -> Self {
+        var g = SystemRandomNumberGenerator()
+        return randomUnitVector2D(using: &g)
+    }
+
     public func aligned(with normal: Vector3D) -> Self {
         if self • normal < 0 {
             return -self
