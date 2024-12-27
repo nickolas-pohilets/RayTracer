@@ -45,8 +45,13 @@ public struct Sphere: Hittable {
         let c = oc • oc - radius * radius
         let D_4 = b_2 * b_2 - a * c
         if D_4 < 0 { return nil }
-        let t = (-b_2 - D_4.squareRoot()) / a
-        if !range.contains(t) { return nil }
+        var t = (-b_2 - D_4.squareRoot()) / a
+        if !range.contains(t) {
+            t = (-b_2 + D_4.squareRoot()) / a
+            if !range.contains(t) {
+                return nil
+            }
+        }
         let point = ray[t]
         var normal = (point - center) / radius
         var face: Face = .front
