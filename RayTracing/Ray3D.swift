@@ -23,4 +23,22 @@ public struct Ray3D {
     public subscript(_ t: Double) -> Point3D {
         return origin + direction * t
     }
+
+    func projection(of point: Point3D) -> Point3D {
+        // dist² = |(o - p) + d * t|²
+        // dist² = (o - p)² + 2d • (o - p)*t + d²t²
+        // d(dist²)/dt = 2d • (o - p) + 2d²t
+        // set to 0 to find shortest distance
+        // t = d • (p - o) / d²
+        let t = direction • (point - origin) / direction.lengthSquared
+        return self[t]
+    }
+
+    func distance(to point: Point3D) -> Double {
+        return distanceSquared(to: point).squareRoot()
+    }
+
+    func distanceSquared(to point: Point3D) -> Double {
+        return (point - projection(of: point)).lengthSquared
+    }
 }

@@ -18,13 +18,19 @@ private let world: [any Hittable] = [
     Sphere(center: Point3D(x:    0, y:      0, z: -1.2), radius:   0.5, material: center),
     Sphere(center: Point3D(x: -1.0, y:      0, z: -1.0), radius:   0.5, material: left),
     Sphere(center: Point3D(x: -1.0, y:      0, z: -1.0), radius:   0.4, material: bubble),
-    Sphere(center: Point3D(x: +1.0, y:      0, z: -1.0), radius:   0.5, material: right)
+    Sphere(center: Point3D(x: +1.0, y:      0, z: -1.0), radius:   0.5, material: right),
+    Cylinder(
+        bottomCenter: Point3D(x: -0.2, y: -0.4, z: -0.5),
+        topCenter: Point3D(x: +1, y: -0.4, z: -1.5),
+        radius: 0.1,
+        material: Lambertian(albedo: ColorF(x: 1.0, y: 0.6, z: 0.1))
+    )
 ]
 
 private let camera = Camera(imageWidth: 400, imageHeight: 400 * 9 / 16)
 private let image = camera.render(world: world)
 
-try image.writePPM(to: getURL("results/sphere-bubble.ppm"))
+try image.writePPM(to: getURL("results/sphere-cylinder.ppm"))
 
 private func getURL(_ path: String) -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)

@@ -164,3 +164,7 @@ private func reflectance(cosθ: Double, ηRatio: Double) -> Double {
     let x4 = x2 * x2
     return R0 + (1 - R0) * (x4 * x)
 }
+
+extension Double {
+    func squared() -> Double { self * self }
+}
