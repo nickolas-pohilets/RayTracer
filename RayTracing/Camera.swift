@@ -14,7 +14,7 @@ struct Camera {
     private var viewportCenter: Point3D
     private var viewportU: Vector3D
     private var viewportV: Vector3D
-    private var samplesPerPixel = 50 // Count of random samples for each pixel
+    private var samplesPerPixel = 200 // Count of random samples for each pixel
     private var maxDepth = 10
     private var defocusDisk: (u: Vector3D, v: Vector3D)? // Defocus disk axes
 
