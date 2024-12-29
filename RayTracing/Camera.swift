@@ -8,14 +8,17 @@
 import Foundation
 
 struct Camera {
+    struct RenderConfig {
+        var samplesPerPixel = 10 // Count of random samples for each pixel
+        var maxDepth = 10
+    }
+
     private var imageWidth: Int
     private var imageHeight: Int
     private var cameraCenter: Point3D
     private var viewportCenter: Point3D
     private var viewportU: Vector3D
     private var viewportV: Vector3D
-    private var samplesPerPixel = 200 // Count of random samples for each pixel
-    private var maxDepth = 10
     private var defocusDisk: (u: Vector3D, v: Vector3D)? // Defocus disk axes
 
     init(
@@ -51,16 +54,16 @@ struct Camera {
         }
     }
 
-    func render(world: some Hittable) -> Image {
+    func render(world: some Hittable, config: RenderConfig = .init()) -> Image {
         var image = Image(width: imageWidth, height: imageHeight)
         for i in 0..<imageHeight {
             for j in 0..<imageWidth {
                 var color: ColorF = .zero
-                for _ in 0..<samplesPerPixel {
+                for _ in 0..<config.samplesPerPixel {
                     let ray = getRay(i, j)
-                    color = color + rayColor(ray, world: world, depth: maxDepth)
+                    color = color + rayColor(ray, world: world, depth: config.maxDepth)
                 }
-                image[i, j] = (color / Double(samplesPerPixel)).linearToGamma() .asU8
+                image[i, j] = (color / Double(config.samplesPerPixel)).linearToGamma() .asU8
             }
         }
         return image

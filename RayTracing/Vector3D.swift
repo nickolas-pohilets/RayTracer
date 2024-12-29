@@ -170,6 +170,10 @@ extension ColorF {
     func linearToGamma() -> Self {
         .init(x: x.squareRoot(), y: y.squareRoot(), z: z.squareRoot())
     }
+
+    static func random(in range: ClosedRange<Double> = 0...1) -> ColorF {
+        return ColorF(x: .random(in: range), y: .random(in: range), z: .random(in: range))
+    }
 }
 
 private func toU8(_ x: Double) -> UInt8 {

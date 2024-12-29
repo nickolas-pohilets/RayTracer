@@ -7,111 +7,72 @@
 
 import Foundation
 
-private let ground = Lambertian(albedo: ColorF(x: 0.8, y: 0.8, z: 0.0))
-private let center = Lambertian(albedo: ColorF(x: 0.1, y: 0.2, z: 0.5))
-private let left   = Dielectric(refractionIndex: 1.5)
-private let bubble = Dielectric(refractionIndex: 1/1.5)
-private let right  = Metal(albedo: ColorF(x: 0.8, y: 0.6, z: 0.2), fuzz: 0.2)
+func makeWorld() -> [any Hittable] {
+    var w: [any Hittable] = []
 
+    let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
+    w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: ground))
 
-private let glass = Composition(
-    operation: .subtract,
-    items: [
-        Cylinder(
-            bottomCenter: Point3D(x: 0, y: 0, z: 0),
-            topCenter: Point3D(x: 0, y: 12, z: 0),
-            radius: 4,
-            material: Dielectric(refractionIndex: 1.5)
-        ),
-        Cylinder(
-            bottomCenter: Point3D(x: 0, y: 1, z: 0),
-            topCenter: Point3D(x: 0, y: 13, z: 0),
-            radius: 3.5,
-            material: Dielectric(refractionIndex: 1.5)
-        )
-    ]
-)
+    for a in -11..<11 {
+        for b in -11..<11 {
+            let chooseMat = Double.random(in: 0..<1)
+            let center = Point3D(x: Double(a) + 0.9*Double.random(in: 0..<1), y: 0.2, z: Double(b) + 0.9*Double.random(in: 0..<1))
 
-private let water = Cylinder(
-    bottomCenter: Point3D(x: 0, y: 1.001, z: 0),
-    topCenter: Point3D(x: 0, y: 8, z: 0),
-    radius: 3.5-0.001,
-    material: Dielectric(refractionIndex: 1.33)
-)
+            if (center - Point3D(x: 4, y: 0.2, z: 0)).length > 0.9 {
+                if (chooseMat < 0.8) {
+                    // diffuse
+                    let albedo = ColorF.random() * ColorF.random()
+                    let material = Lambertian(albedo: albedo)
+                    w.append(Sphere(center: center, radius: 0.2, material: material))
+                } else if (chooseMat < 0.95) {
+                    // metal
+                    let albedo = ColorF.random(in: 0.5...1)
+                    let fuzz = Double.random(in: 0...0.5)
+                    let material = Metal(albedo: albedo, fuzz: fuzz)
+                    w.append(Sphere(center: center, radius: 0.2, material: material))
+                } else {
+                    // glass
+                    let material = Dielectric(refractionIndex: 1.5);
+                    w.append(Sphere(center: center, radius: 0.2, material: material))
+                }
+            }
+        }
+    }
 
-let alpha = Double.pi / 6
+    let material1 = Dielectric(refractionIndex: 1.5)
+    w.append(Sphere(center: Point3D(x: 0, y: 1, z: 0), radius: 1.0, material: material1))
 
-let p1 = Point3D(x: -3.4 * cos(alpha), y: 1.1, z: -3.4*sin(alpha))
-let p2 = Point3D(x: 0, y: 12, z: 3.4)
-let p3 = p1 + (p2 - p1) * (13.0/11.0)
+    let material2 = Lambertian(albedo: ColorF(x: 0.4, y: 0.2, z: 0.1))
+    w.append(Sphere(center: Point3D(x: -4, y: 1, z: 0), radius: 1.0, material: material2))
 
-private let pencil = Cylinder(
-    bottomCenter: p1,
-    topCenter: p3,
-    radius: 0.1,
-    material: center
-)
+    let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
+    w.append(Sphere(center: Point3D(x: 4, y: 1, z: 0), radius: 1.0, material: material3))
 
-
-let r = 0.0 ..< Double.infinity
-//print(c.hit(ray: Ray3D(origin: Point3D(x: 0, y: 0, z: -2), direction: Vector3D(x: 0, y: 0, z: 1)), range: r))
-//print(c.hit(ray: Ray3D(origin: Point3D(x: 0.5, y: 0.5, z: -2), direction: Vector3D(x: 0, y: 0, z: 1)), range: r))
-//print(c.hit(ray: Ray3D(origin: Point3D(x: 1, y: 1, z: -2), direction: Vector3D(x: 0, y: 0, z: 1)), range: r))
-//print(c.hit(ray: Ray3D(origin: Point3D(x: -5, y: -5, z: 6), direction: Vector3D(x: 1, y: 1, z: 0)), range: r))
-//print(c.hit(ray: Ray3D(origin: Point3D(x: -10, y: 0.8, z: 6), direction: Vector3D(x: 1, y: 0, z: 0)), range: r))
-
-
-//let water: Double = 1.33
-//let glass: Double = 1.5
-
-private let world: [any Hittable] = [
-//    Cylinder(
-//        bottomCenter: Point3D(x: 0, y: 0, z: 0),
-//        topCenter: Point3D(x: 0, y: 10, z: 0),
-//        radius: 2,
-//        material: Dielectric(refractionIndex: glass)
-//    ),
-//    Cylinder(
-//        bottomCenter: Point3D(x: 0, y: 0.5, z: 0),
-//        topCenter: Point3D(x: 0, y: 6, z: 0),
-//        radius: 1.5,
-//        material: Dielectric(refractionIndex: glass)
-//    ),
-    Sphere(center: Point3D(x:    0, y: -500.5, z: -1  ), radius: 500.0, material: ground),
-    glass,
-    water,
-    pencil
-//    Sphere(center: Point3D(x:    0, y:  7.5, z: 0), radius:   2, material: center),
-//    Sphere(center: Point3D(x: -1.0, y:      0, z: -1.0), radius:   0.5, material: left),
-//    Cylinder(
-//        bottomCenter: Point3D(x: -1, y: 0, z: +0),
-//        topCenter: Point3D(x: -1, y: 0, z: -2),
-//        radius: 0.5,
-//        material: left
-//    ),
-//    Sphere(center: Point3D(x: -1.0, y:      0, z: -1.0), radius:   0.4, material: bubble),
-//    Sphere(center: Point3D(x: +1.0, y:      0, z: -1.0), radius:   0.5, material: right),
-//    Cylinder(
-//        bottomCenter: Point3D(x: +1, y: -0.5, z: -1.0),
-//        topCenter: Point3D(x: +1, y: +0.5, z: -1.0),
-//        radius: 0.5,
-//        material: right
-//    )
-]
-
-private let camera = Camera(
-    imageWidth: 200,
-    imageHeight: 225,
-    verticalFOV: 60,
-    lookFrom: Point3D(x: -15, y: 14, z: 0),
-    lookAt: Point3D(x: 8, y: 3, z: 0)
-)
-private let image = camera.render(world: world)
-
-try image.writePPM(to: getURL("results/glass-pencil.ppm"))
+    return w
+}
 
 private func getURL(_ path: String) -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
 }
 
+func main() throws {
+    let world = makeWorld()
 
+    let imageWidth = 120 * 2
+    let camera = Camera(
+        imageWidth: imageWidth,
+        imageHeight: imageWidth * 9 / 16,
+        verticalFOV: 20,
+        lookFrom: Point3D(x: 13, y: 2, z: 3),
+        lookAt: Point3D(x: 0, y: 0, z: 0),
+        defocusAngle: 0.6,
+        focusDistance: 10
+    )
+    let t = Date()
+    let image = camera.render(world: world, config: .init(samplesPerPixel: 10, maxDepth: 10))
+    let duration = Date().timeIntervalSince(t)
+    print("Done in \(duration)s")
+    try image.writePPM(to: getURL("results/book1-final.ppm"))
+}
+
+try main()

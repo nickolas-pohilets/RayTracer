@@ -73,10 +73,35 @@ public protocol HittableVolume: Hittable {
     func hits(ray: Ray3D) -> [HitRange]
 }
 
+public protocol HittableConvexVolume: HittableVolume {
+    func hit(ray: Ray3D) -> HitRange?
+}
+
 extension HittableVolume {
     public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
         let ranges = self.hits(ray: ray)
         for r in ranges {
+            if range.contains(r.entry.t) {
+                return r.entry
+            }
+            if range.contains(r.exit.t) {
+                return r.exit
+            }
+        }
+        return nil
+    }
+}
+
+extension HittableConvexVolume {
+    public func hits(ray: Ray3D) -> [HitRange] {
+        if let range = self.hit(ray: ray) {
+            return [range]
+        }
+        return []
+    }
+
+    public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
+        if let r = self.hit(ray: ray) {
             if range.contains(r.entry.t) {
                 return r.entry
             }
@@ -123,7 +148,7 @@ public struct Sphere: HittableVolume {
     }
 }
 
-public struct Cylinder: HittableVolume {
+public struct Cylinder: HittableConvexVolume {
     public var bottomCenter: Point3D
     public var topCenter: Point3D
     public var radius: Double
@@ -136,7 +161,7 @@ public struct Cylinder: HittableVolume {
         self.material = material
     }
 
-    public func hits(ray: Ray3D) -> [HitRange] {
+    public func hit(ray: Ray3D) -> HitRange? {
         // P = ray[t]
         // Q = (P - baseCenter) = ray.direction * t + (ray.origin - baseCenter)
         // Qp = axis * (Q • axis)
@@ -167,7 +192,7 @@ public struct Cylinder: HittableVolume {
                 // Ray is parallel to the bottom planes
                 if db < 0 && dt < 0 || db > 0 && dt > 0 {
                     // No intersection
-                    return []
+                    return nil
                 }
                 // Not constrained by the top/bottom planes
             }
@@ -181,7 +206,7 @@ public struct Cylinder: HittableVolume {
             let c = -(axis • ob).squared() + ob • ob - (radius).squared()
 
             let D_4 = b_2 * b_2 - a * c
-            if D_4 < 0 { return [] }
+            if D_4 < 0 { return nil }
             let D_4_root = D_4.squareRoot()
             let t1 = (-b_2 - D_4_root) / a
             let t2 = (-b_2 + D_4_root) / a
@@ -200,7 +225,7 @@ public struct Cylinder: HittableVolume {
                 // Ray is parallel to the axis
                 if axisRay.distanceSquared(to: ray.origin) > radius.squared() {
                     // Ray is outside of the side tube
-                    return []
+                    return nil
                 }
                 // Not constrained by the sides
             }
@@ -216,10 +241,10 @@ public struct Cylinder: HittableVolume {
             }
         }
         if intersection.exit.t < intersection.entry.t {
-            return []
+            return nil
         }
 
-        return [intersection]
+        return intersection
     }
 }
 
