@@ -57,9 +57,11 @@ struct Camera {
     func render(world: some Hittable, config: RenderConfig = .init()) async -> Image {
         var image = Image(width: imageWidth, height: imageHeight)
         await withTaskGroup(of: (Int, Image).self) { group in
+            var rng = SystemRandomNumberGenerator()
             for i in 0..<imageHeight {
+                let seed = rng.next()
                 group.addTask {
-                    let rowImage = self.render(row: i, world: world, config: config)
+                    let rowImage = self.render(row: i, seed: seed, world: world, config: config)
                     return (i, rowImage)
                 }
             }
@@ -72,42 +74,43 @@ struct Camera {
         return image
     }
 
-    private func render(row i: Int, world: some Hittable, config: RenderConfig) -> Image {
+    private func render(row i: Int, seed: UInt64, world: some Hittable, config: RenderConfig) -> Image {
+        var rng = WyRand(seed: seed)
         var image = Image(width: imageWidth, height: 1)
         for j in 0..<imageWidth {
             var color: ColorF = .zero
             for _ in 0..<config.samplesPerPixel {
-                let ray = getRay(i, j)
-                color = color + rayColor(ray, world: world, depth: config.maxDepth)
+                let ray = getRay(i, j, using: &rng)
+                color = color + rayColor(ray, world: world, depth: config.maxDepth, using: &rng)
             }
             image[0, j] = (color / Double(config.samplesPerPixel)).linearToGamma() .asU8
         }
         return image
     }
 
-    private func getRay(_ i: Int, _ j: Int) -> Ray3D {
-        let origin = getRayOrigin()
-        let offsetX = Double.random(in: 0..<1)
-        let offsetY = Double.random(in: 0..<1)
+    private func getRay(_ i: Int, _ j: Int, using rng: inout some RandomNumberGenerator) -> Ray3D {
+        let origin = getRayOrigin(using: &rng)
+        let offsetX = Double.random(in: 0..<1, using: &rng)
+        let offsetY = Double.random(in: 0..<1, using: &rng)
         let pixelSample = viewportCenter
             + ((Double(i) + offsetY) / Double(imageHeight) - 0.5) * viewportV
             + ((Double(j) + offsetX) / Double(imageWidth) - 0.5) * viewportU
         return Ray3D(origin: origin, target: pixelSample, normalized: true)
     }
 
-    private func getRayOrigin() -> Vector3D {
+    private func getRayOrigin(using rng: inout some RandomNumberGenerator) -> Vector3D {
         guard let defocusDisk else { return cameraCenter }
-        let p = Vector3D.randomUnitVector2D()
+        let p = Vector3D.randomUnitVector2D(using: &rng)
         return cameraCenter + p.x * defocusDisk.u + p.y * defocusDisk.v
     }
 
-    private func rayColor(_ ray: Ray3D, world: some Hittable, depth: Int) -> ColorF {
+    private func rayColor(_ ray: Ray3D, world: some Hittable, depth: Int, using rng: inout some RandomNumberGenerator) -> ColorF {
         if depth <= 0 {
             return .zero
         }
         if let hit = world.hit(ray: ray, range: 0.001..<Double.infinity) {
-            if let (attenuation, scatered) = hit.material.scatter(ray: ray, hit: hit) {
-                return attenuation * rayColor(scatered, world: world, depth: depth - 1)
+            if let (attenuation, scatered) = hit.material.scatter(ray: ray, hit: hit, using: &rng) {
+                return attenuation * rayColor(scatered, world: world, depth: depth - 1, using: &rng)
             }
             return .zero
         }

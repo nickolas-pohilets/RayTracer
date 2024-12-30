@@ -105,11 +105,6 @@ public struct Vector3D {
         }
     }
 
-    public static func randomUnitVector() -> Self {
-        var g = SystemRandomNumberGenerator()
-        return randomUnitVector(using: &g)
-    }
-
     public static func randomUnitVector2D<T: RandomNumberGenerator>(
         using generator: inout T
     ) -> Self {
@@ -124,11 +119,6 @@ public struct Vector3D {
                 return v / lenSq.squareRoot()
             }
         }
-    }
-
-    public static func randomUnitVector2D() -> Self {
-        var g = SystemRandomNumberGenerator()
-        return randomUnitVector2D(using: &g)
     }
 
     public func aligned(with normal: Vector3D) -> Self {
@@ -171,8 +161,12 @@ extension ColorF {
         .init(x: x.squareRoot(), y: y.squareRoot(), z: z.squareRoot())
     }
 
-    static func random(in range: ClosedRange<Double> = 0...1) -> ColorF {
-        return ColorF(x: .random(in: range), y: .random(in: range), z: .random(in: range))
+    static func random(in range: ClosedRange<Double> = 0...1, using rng: inout some RandomNumberGenerator) -> ColorF {
+        return ColorF(
+            x: .random(in: range, using: &rng),
+            y: .random(in: range, using: &rng),
+            z: .random(in: range, using: &rng)
+        )
     }
 }
 

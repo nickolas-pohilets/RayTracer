@@ -13,6 +13,8 @@ func makeWorld() -> [any Hittable] {
     let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
     w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: ground))
 
+    var rng = SystemRandomNumberGenerator()
+
     for a in -11..<11 {
         for b in -11..<11 {
             let chooseMat = Double.random(in: 0..<1)
@@ -21,12 +23,12 @@ func makeWorld() -> [any Hittable] {
             if (center - Point3D(x: 4, y: 0.2, z: 0)).length > 0.9 {
                 if (chooseMat < 0.8) {
                     // diffuse
-                    let albedo = ColorF.random() * ColorF.random()
+                    let albedo = ColorF.random(using: &rng) * ColorF.random(using: &rng)
                     let material = Lambertian(albedo: albedo)
                     w.append(Sphere(center: center, radius: 0.2, material: material))
                 } else if (chooseMat < 0.95) {
                     // metal
-                    let albedo = ColorF.random(in: 0.5...1)
+                    let albedo = ColorF.random(in: 0.5...1, using: &rng)
                     let fuzz = Double.random(in: 0...0.5)
                     let material = Metal(albedo: albedo, fuzz: fuzz)
                     w.append(Sphere(center: center, radius: 0.2, material: material))
@@ -58,7 +60,7 @@ private func getURL(_ path: String) -> URL {
 func main() async throws {
     let world = makeWorld()
 
-    let imageWidth = 1200
+    let imageWidth = 160
     let camera = Camera(
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
@@ -69,10 +71,10 @@ func main() async throws {
         focusDistance: 10
     )
     let t = Date()
-    let image = await camera.render(world: world, config: .init(samplesPerPixel: 500, maxDepth: 50))
+    let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/book1-final.ppm"))
+    try image.writePPM(to: getURL("results/test.ppm"))
 }
 
 try await main()
