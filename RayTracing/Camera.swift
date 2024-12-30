@@ -81,7 +81,8 @@ struct Camera {
             var color: ColorF = .zero
             for _ in 0..<config.samplesPerPixel {
                 let ray = getRay(i, j, using: &rng)
-                color = color + rayColor(ray, world: world, depth: config.maxDepth, using: &rng)
+                let time = Double.random(in: 0...1, using: &rng)
+                color = color + rayColor(ray, time: time, world: world, depth: config.maxDepth, using: &rng)
             }
             image[0, j] = (color / Double(config.samplesPerPixel)).linearToGamma() .asU8
         }
@@ -104,13 +105,13 @@ struct Camera {
         return cameraCenter + p.x * defocusDisk.u + p.y * defocusDisk.v
     }
 
-    private func rayColor(_ ray: Ray3D, world: some Hittable, depth: Int, using rng: inout some RandomNumberGenerator) -> ColorF {
+    private func rayColor(_ ray: Ray3D, time: Double, world: some Hittable, depth: Int, using rng: inout some RandomNumberGenerator) -> ColorF {
         if depth <= 0 {
             return .zero
         }
-        if let hit = world.hit(ray: ray, range: 0.001..<Double.infinity) {
+        if let hit = world.hit(ray: ray, time: time, range: 0.001..<Double.infinity) {
             if let (attenuation, scatered) = hit.material.scatter(ray: ray, hit: hit, using: &rng) {
-                return attenuation * rayColor(scatered, world: world, depth: depth - 1, using: &rng)
+                return attenuation * rayColor(scatered, time: time, world: world, depth: depth - 1, using: &rng)
             }
             return .zero
         }

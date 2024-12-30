@@ -25,7 +25,9 @@ func makeWorld() -> [any Hittable] {
                     // diffuse
                     let albedo = ColorF.random(using: &rng) * ColorF.random(using: &rng)
                     let material = Lambertian(albedo: albedo)
-                    w.append(Sphere(center: center, radius: 0.2, material: material))
+
+                    let center2 = center + Vector3D(x: 0, y: .random(in: 0...0.5, using: &rng), z: 0)
+                    w.append(Sphere(centerStart: center, centerStop: center2, radius: 0.2, material: material))
                 } else if (chooseMat < 0.95) {
                     // metal
                     let albedo = ColorF.random(in: 0.5...1, using: &rng)
@@ -60,7 +62,7 @@ private func getURL(_ path: String) -> URL {
 func main() async throws {
     let world = makeWorld()
 
-    let imageWidth = 160
+    let imageWidth = 400
     let camera = Camera(
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
@@ -74,7 +76,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/test.ppm"))
+    try image.writePPM(to: getURL("results/dropping-balls.ppm"))
 }
 
 try await main()

@@ -66,20 +66,20 @@ public struct HitRange {
 }
 
 public protocol Hittable {
-    func hit(ray: Ray3D, range: Range<Double>) -> HitRecord?
+    func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord?
 }
 
 public protocol HittableVolume: Hittable {
-    func hits(ray: Ray3D) -> [HitRange]
+    func hits(ray: Ray3D, time: Double) -> [HitRange]
 }
 
 public protocol HittableConvexVolume: HittableVolume {
-    func hit(ray: Ray3D) -> HitRange?
+    func hit(ray: Ray3D, time: Double) -> HitRange?
 }
 
 extension HittableVolume {
-    public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
-        let ranges = self.hits(ray: ray)
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        let ranges = self.hits(ray: ray, time: time)
         for r in ranges {
             if range.contains(r.entry.t) {
                 return r.entry
@@ -93,15 +93,15 @@ extension HittableVolume {
 }
 
 extension HittableConvexVolume {
-    public func hits(ray: Ray3D) -> [HitRange] {
-        if let range = self.hit(ray: ray) {
+    public func hits(ray: Ray3D, time: Double) -> [HitRange] {
+        if let range = self.hit(ray: ray, time: time) {
             return [range]
         }
         return []
     }
 
-    public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
-        if let r = self.hit(ray: ray) {
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        if let r = self.hit(ray: ray, time: time) {
             if range.contains(r.entry.t) {
                 return r.entry
             }
@@ -114,34 +114,41 @@ extension HittableConvexVolume {
 }
 
 public struct Sphere: HittableVolume {
-    var center: Point3D
+    var center: Ray3D
     var radius: Double
     var material: any Material
 
     public init(center: Point3D, radius: Double, material: any Material) {
-        self.center = center
+        self.center = Ray3D(origin: center, direction: .zero)
         self.radius = radius
         self.material = material
     }
 
-    public func hits(ray: Ray3D) -> [HitRange] {
+    public init(centerStart: Point3D, centerStop: Point3D, radius: Double, material: any Material) {
+        self.center = Ray3D(origin: centerStart, target: centerStop, normalized: false)
+        self.radius = radius
+        self.material = material
+    }
+
+    public func hits(ray: Ray3D, time: Double) -> [HitRange] {
         // P = ray[t]
         // (ray.origin + ray.direction * t - C) • (ray.origin + ray.direction * t - C) = radius²
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // t² * ray.direction • ray.direction + t * (2 * ray.direction • (ray.origin - C)) + (ray.origin - C) • (ray.origin - C) - radius² = 0
+        let center = self.center[time]
         let oc = ray.origin - center
         let a = ray.direction • ray.direction
         let b_2 = ray.direction • oc
         let c = oc • oc - radius * radius
         let D_4 = b_2 * b_2 - a * c
         if D_4 < 0 { return [] }
-        let hit1 = hitRecord(for: (-b_2 - D_4.squareRoot()) / a, in: ray)
-        let hit2 = hitRecord(for: (-b_2 + D_4.squareRoot()) / a, in: ray)
+        let hit1 = hitRecord(for: (-b_2 - D_4.squareRoot()) / a, center: center, in: ray)
+        let hit2 = hitRecord(for: (-b_2 + D_4.squareRoot()) / a, center: center, in: ray)
         return [HitRange(hit1, hit2)]
     }
 
-    private func hitRecord(for t: Double, in ray: Ray3D) -> HitRecord {
+    private func hitRecord(for t: Double, center: Point3D, in ray: Ray3D) -> HitRecord {
         let point = ray[t]
         let normal = (point - center) / radius
         return HitRecord(t: t, point: point, normal: normal, rayDirection: ray.direction, material: material)
@@ -161,7 +168,7 @@ public struct Cylinder: HittableConvexVolume {
         self.material = material
     }
 
-    public func hit(ray: Ray3D) -> HitRange? {
+    public func hit(ray: Ray3D, time: Double) -> HitRange? {
         // P = ray[t]
         // Q = (P - baseCenter) = ray.direction * t + (ray.origin - baseCenter)
         // Qp = axis * (Q • axis)
@@ -288,10 +295,10 @@ struct Composition: HittableVolume {
     var operation: Operation
     var items: [any HittableVolume]
 
-    func hits(ray: Ray3D) -> [HitRange] {
-        var ranges = items[0].hits(ray: ray)
+    func hits(ray: Ray3D, time: Double) -> [HitRange] {
+        var ranges = items[0].hits(ray: ray, time: time)
         for item in items.dropFirst() {
-            let next = item.hits(ray: ray)
+            let next = item.hits(ray: ray, time: time)
             switch operation {
             case .union:
                 ranges = Self.makeUnion(lhs: ranges, rhs: next)
@@ -401,11 +408,11 @@ struct Composition: HittableVolume {
 }
 
 extension Array: Hittable where Element == any Hittable {
-    public func hit(ray: Ray3D, range: Range<Double>) -> HitRecord? {
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
         var result: HitRecord?
         for item in self {
             let itemRange = range.lowerBound..<(result?.t ?? range.upperBound)
-            if let hit = item.hit(ray: ray, range: itemRange) {
+            if let hit = item.hit(ray: ray, time: time, range: itemRange) {
                 result = hit
             }
         }
