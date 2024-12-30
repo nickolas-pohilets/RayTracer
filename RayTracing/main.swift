@@ -7,7 +7,7 @@
 
 import Foundation
 
-func makeWorld() -> [any Hittable] {
+func makeWorld() -> some Hittable {
     var w: [any Hittable] = []
 
     let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
@@ -52,7 +52,7 @@ func makeWorld() -> [any Hittable] {
     let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
     w.append(Sphere(center: Point3D(x: 4, y: 1, z: 0), radius: 1.0, material: material3))
 
-    return w
+    return BoundingVolumeNode(items: w)
 }
 
 private func getURL(_ path: String) -> URL {

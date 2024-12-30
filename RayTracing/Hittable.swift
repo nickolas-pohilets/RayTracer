@@ -66,6 +66,8 @@ public struct HitRange {
 }
 
 public protocol Hittable {
+    var center: Point3D { get }
+    var boundingBox: AABB { get }
     func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord?
 }
 
@@ -114,20 +116,29 @@ extension HittableConvexVolume {
 }
 
 public struct Sphere: HittableVolume {
-    var center: Ray3D
+    var centerRay: Ray3D
     var radius: Double
     var material: any Material
 
     public init(center: Point3D, radius: Double, material: any Material) {
-        self.center = Ray3D(origin: center, direction: .zero)
+        self.centerRay = Ray3D(origin: center, direction: .zero)
         self.radius = radius
         self.material = material
     }
 
     public init(centerStart: Point3D, centerStop: Point3D, radius: Double, material: any Material) {
-        self.center = Ray3D(origin: centerStart, target: centerStop, normalized: false)
+        self.centerRay = Ray3D(origin: centerStart, target: centerStop, normalized: false)
         self.radius = radius
         self.material = material
+    }
+
+    public var center: Point3D {
+        return self.centerRay[0.5]
+    }
+
+    public var boundingBox: AABB {
+        let r = Vector3D(x: radius, y: radius, z: radius)
+        return AABB(centerRay.origin - r, centerRay.origin + r, centerRay[1] - r, centerRay[1] + r)
     }
 
     public func hits(ray: Ray3D, time: Double) -> [HitRange] {
@@ -136,7 +147,7 @@ public struct Sphere: HittableVolume {
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // t² * ray.direction • ray.direction + t * (2 * ray.direction • (ray.origin - C)) + (ray.origin - C) • (ray.origin - C) - radius² = 0
-        let center = self.center[time]
+        let center = self.centerRay[time]
         let oc = ray.origin - center
         let a = ray.direction • ray.direction
         let b_2 = ray.direction • oc
@@ -166,6 +177,22 @@ public struct Cylinder: HittableConvexVolume {
         self.topCenter = topCenter
         self.radius = radius
         self.material = material
+    }
+
+    public var center: Point3D {
+        return (topCenter + bottomCenter) / 2
+    }
+
+    public var boundingBox: AABB {
+        let height = (topCenter - bottomCenter)
+        let heightDir = height.normalized()
+        let size = Vector3D(
+            x: abs(height.x) * 0.5 + radius * max(0, 1 - heightDir.x * heightDir.x).squareRoot(),
+            y: abs(height.y) * 0.5 + radius * max(0, 1 - heightDir.y * heightDir.y).squareRoot(),
+            z: abs(height.z) * 0.5 + radius * max(0, 1 - heightDir.z * heightDir.z).squareRoot()
+        )
+        let center = self.center
+        return AABB(center - size, center + size)
     }
 
     public func hit(ray: Ray3D, time: Double) -> HitRange? {
@@ -285,17 +312,29 @@ extension [HitRange] {
     }
 }
 
-struct Composition: HittableVolume {
-    enum Operation {
+public struct Composition: HittableVolume {
+    public enum Operation {
         case union
         case intersection
         case subtract
     }
 
-    var operation: Operation
-    var items: [any HittableVolume]
+    public init(operation: Operation, items: [any HittableVolume]) {
+        self.operation = operation
+        self.items = items
+        self.boundingBox = AABB()
+        for item in items {
+            boundingBox.add(item.boundingBox)
+        }
+    }
 
-    func hits(ray: Ray3D, time: Double) -> [HitRange] {
+    public var operation: Operation
+    public var items: [any HittableVolume]
+    public private(set) var boundingBox: AABB
+
+    public var center: Point3D { boundingBox.center }
+
+    public func hits(ray: Ray3D, time: Double) -> [HitRange] {
         var ranges = items[0].hits(ray: ray, time: time)
         for item in items.dropFirst() {
             let next = item.hits(ray: ray, time: time)
@@ -407,7 +446,65 @@ struct Composition: HittableVolume {
     }
 }
 
+
+class BoundingVolumeNode: Hittable {
+    public private(set) var boundingBox: AABB
+    private var leftChild: any Hittable
+    private var rightChild: any Hittable
+
+    public init(items: [any Hittable]) {
+        assert(items.count >= 2)
+        boundingBox = AABB()
+        for item in items {
+            boundingBox.add(item.boundingBox)
+        }
+        let longestAxis = boundingBox.longestAxis
+        var itemsCopy = consume items
+        itemsCopy.sort { a, b in
+            a.center[longestAxis] < b.center[longestAxis]
+        }
+        let mid = (itemsCopy.count + 1) / 2
+        if mid == 1 {
+            leftChild = itemsCopy[0]
+        } else {
+            leftChild = BoundingVolumeNode(items: Array(itemsCopy[0..<mid]))
+        }
+        if mid + 1 == itemsCopy.count {
+            rightChild = itemsCopy[mid]
+        } else {
+            rightChild = BoundingVolumeNode(items: Array(itemsCopy[mid...]))
+        }
+    }
+
+    public var center: Point3D {
+        boundingBox.center
+    }
+
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        if boundingBox.hit(ray: ray) == nil {
+            return nil
+        }
+
+        let leftHit = leftChild.hit(ray: ray, time: time, range: range)
+        let rightHit = rightChild.hit(ray: ray, time: time, range: range.lowerBound..<(leftHit?.t ?? range.upperBound))
+        return rightHit ?? leftHit
+    }
+}
+
+
 extension Array: Hittable where Element == any Hittable {
+    public var center: Point3D {
+        return boundingBox.center
+    }
+    
+    public var boundingBox: AABB {
+        var result = AABB()
+        for item in self {
+            result.add(item.boundingBox)
+        }
+        return result
+    }
+    
     public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
         var result: HitRecord?
         for item in self {
