@@ -55,10 +55,10 @@ private func getURL(_ path: String) -> URL {
     URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
 }
 
-func main() throws {
+func main() async throws {
     let world = makeWorld()
 
-    let imageWidth = 120 * 2
+    let imageWidth = 1200
     let camera = Camera(
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
@@ -69,10 +69,10 @@ func main() throws {
         focusDistance: 10
     )
     let t = Date()
-    let image = camera.render(world: world, config: .init(samplesPerPixel: 10, maxDepth: 10))
+    let image = await camera.render(world: world, config: .init(samplesPerPixel: 500, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
     try image.writePPM(to: getURL("results/book1-final.ppm"))
 }
 
-try main()
+try await main()

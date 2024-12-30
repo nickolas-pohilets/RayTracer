@@ -54,17 +54,33 @@ struct Camera {
         }
     }
 
-    func render(world: some Hittable, config: RenderConfig = .init()) -> Image {
+    func render(world: some Hittable, config: RenderConfig = .init()) async -> Image {
         var image = Image(width: imageWidth, height: imageHeight)
-        for i in 0..<imageHeight {
-            for j in 0..<imageWidth {
-                var color: ColorF = .zero
-                for _ in 0..<config.samplesPerPixel {
-                    let ray = getRay(i, j)
-                    color = color + rayColor(ray, world: world, depth: config.maxDepth)
+        await withTaskGroup(of: (Int, Image).self) { group in
+            for i in 0..<imageHeight {
+                group.addTask {
+                    let rowImage = self.render(row: i, world: world, config: config)
+                    return (i, rowImage)
                 }
-                image[i, j] = (color / Double(config.samplesPerPixel)).linearToGamma() .asU8
             }
+            for await (index, rowImage) in group {
+                for j in 0..<imageWidth {
+                    image[index, j] = rowImage[0, j]
+                }
+            }
+        }
+        return image
+    }
+
+    private func render(row i: Int, world: some Hittable, config: RenderConfig) -> Image {
+        var image = Image(width: imageWidth, height: 1)
+        for j in 0..<imageWidth {
+            var color: ColorF = .zero
+            for _ in 0..<config.samplesPerPixel {
+                let ray = getRay(i, j)
+                color = color + rayColor(ray, world: world, depth: config.maxDepth)
+            }
+            image[0, j] = (color / Double(config.samplesPerPixel)).linearToGamma() .asU8
         }
         return image
     }
