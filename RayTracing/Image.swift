@@ -5,22 +5,24 @@
 //  Created by Mykola Pokhylets on 24/12/2024.
 //
 import Foundation
+import UniformTypeIdentifiers
+import CoreGraphics
 
-struct Color<T> {
-    var r: T
-    var g: T
-    var b: T
-}
+struct ColorU8 {
+    var r: UInt8
+    var g: UInt8
+    var b: UInt8
+    private var _padding: UInt8 = 0
 
-extension Color where T: Numeric {
+    public init(r: UInt8, g: UInt8, b: UInt8) {
+        self.r = r
+        self.g = g
+        self.b = b
+    }
+
     static var black: Self { .init(r: .zero, g: .zero, b: .zero) }
-}
-
-extension Color where T: UnsignedInteger, T: FixedWidthInteger {
     static var white: Self { .init(r: .max, g: .max, b: .max) }
 }
-
-typealias ColorU8 = Color<UInt8>
 
 extension OutputStream: @retroactive TextOutputStream {
     public func write(_ string: String) {
@@ -45,7 +47,7 @@ struct Image {
         self.data = [ColorU8].init(repeating: fillColor, count: width * height)
     }
 
-    subscript(_ i: Int, _ j: Int) -> Color<UInt8> {
+    subscript(_ i: Int, _ j: Int) -> ColorU8 {
         get {
             checkBounds(i, j)
             return data[i * width + j]
@@ -59,6 +61,22 @@ struct Image {
     private func checkBounds(_ i: Int, _ j : Int) {
         assert(j >= 0 && j < width)
         assert(i >= 0 && i < height)
+    }
+
+    mutating func withContext<R>(_ block: (CGContext) throws -> R) rethrows -> R {
+        try data.withUnsafeMutableBufferPointer { buffer in
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * MemoryLayout<ColorU8>.stride,
+                space: colorSpace,
+                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue
+            )!
+            return try block(context)
+        }
     }
 
     func writePPM<Target: TextOutputStream>(to target: inout Target) {
@@ -93,4 +111,51 @@ struct Image {
             }
         }
     }
+}
+
+extension Image {
+    static func load(url: URL) throws -> Image {
+        let cgImage = try CGImage.load(url: url)
+        var image = Image(width: cgImage.width, height: cgImage.height)
+        image.withContext { cgContext in
+            cgContext.draw(cgImage, in: CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+        }
+        return image
+    }
+}
+
+private extension CGImage {
+    static func load(url: URL) throws -> CGImage {
+        let image: CGImage?
+        let uti = UTType(filenameExtension: url.pathExtension)
+        switch uti {
+        case .some(.jpeg):
+            image = CGImage(
+                jpegDataProviderSource: try getDataProvider(url: url),
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+            )
+        case .some(.png):
+            image = CGImage(
+                pngDataProviderSource: try getDataProvider(url: url),
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+            )
+        default:
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFeatureUnsupportedError)
+        }
+        guard let image else {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadCorruptFileError)
+        }
+        return image
+    }
+}
+
+private func getDataProvider(url: URL) throws -> CGDataProvider {
+    guard let dataProvider = CGDataProvider(url: url as CFURL) else {
+        throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError)
+    }
+    return dataProvider
 }

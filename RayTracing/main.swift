@@ -60,6 +60,9 @@ private func getURL(_ path: String) -> URL {
 }
 
 func main() async throws {
+    let texture = try Image.load(url: getURL("textures/earthmap.jpg"))
+    try texture.writePPM(to: getURL("textures/earthmap.ppm"))
+
     let world = makeWorld()
 
     let imageWidth = 400
