@@ -10,7 +10,8 @@ import Foundation
 func makeWorld() -> some Hittable {
     var w: [any Hittable] = []
 
-    let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
+    let checker = CheckerTexture(scale: 0.32, even: ColorF(x: 0.2, y: 0.3, z: 0.1), odd: ColorF(x: 0.9, y: 0.9, z: 0.9))
+    let ground = Lambertian(texture: checker)
     w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: ground))
 
     var rng = SystemRandomNumberGenerator()
@@ -60,9 +61,9 @@ private func getURL(_ path: String) -> URL {
 }
 
 func main() async throws {
-    let texture = try Image.load(url: getURL("textures/earthmap.jpg"))
-    try texture.writePPM(to: getURL("textures/earthmap.ppm"))
-
+//    let texture = try Image.load(url: getURL("textures/earthmap.jpg"))
+//    try texture.writePPM(to: getURL("textures/earthmap.ppm"))
+//
     let world = makeWorld()
 
     let imageWidth = 400
@@ -79,7 +80,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/dropping-balls.ppm"))
+    try image.writePPM(to: getURL("results/dropping-balls-checker.ppm"))
 }
 
 try await main()

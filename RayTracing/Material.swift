@@ -10,10 +10,14 @@ public protocol Material {
 }
 
 public struct Lambertian: Material {
-    public var albedo: ColorF
+    public var texture: any Texture
 
     public init(albedo: ColorF) {
-        self.albedo = albedo
+        self.texture = SolidColor(albedo: albedo)
+    }
+
+    public init(texture: any Texture) {
+        self.texture = texture
     }
 
     public func scatter(ray: Ray3D, hit: HitRecord, using rng: inout some RandomNumberGenerator) -> (attenuation: ColorF, scattered: Ray3D)? {
@@ -26,6 +30,7 @@ public struct Lambertian: Material {
                 break
             }
         }
+        let albedo = texture[u: hit.u, v: hit.v, point: hit.point]
         return .some((attenuation: albedo, scattered: Ray3D(origin: hit.point, direction: direction)))
     }
 }

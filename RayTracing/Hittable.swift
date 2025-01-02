@@ -22,6 +22,8 @@ public struct HitRecord {
     var point: Point3D
     var normal: Vector3D
     var face: Face
+    var u: Double = 0
+    var v: Double = 0
     var material: any Material
 
     public init(t: Double, point: Point3D, normal: Vector3D, face: Face, material: any Material) {
