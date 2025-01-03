@@ -7,7 +7,7 @@
 
 import Foundation
 
-func makeWorld() throws -> some Hittable {
+func makeWorld1() throws -> some Hittable {
     var w: [any Hittable] = []
 
     let checker = CheckerTexture(scale: 0.32, even: ColorF(x: 0.2, y: 0.3, z: 0.1), odd: ColorF(x: 0.9, y: 0.9, z: 0.9))
@@ -58,15 +58,9 @@ func makeWorld() throws -> some Hittable {
     return BoundingVolumeNode(items: w)
 }
 
-private func getURL(_ path: String) -> URL {
-    URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
-}
-
-func main() async throws {
-    let world = try makeWorld()
-
+func makeCamera1() -> Camera {
     let imageWidth = 400
-    let camera = Camera(
+    return Camera(
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
         verticalFOV: 20,
@@ -75,11 +69,41 @@ func main() async throws {
         defocusAngle: 0.6,
         focusDistance: 10
     )
+}
+
+func makeWorld2() throws -> some Hittable {
+    var w: [any Hittable] = []
+
+    var rng = SystemRandomNumberGenerator()
+    let noiseTex = NoiseTexture(noise: PerlinNoise(using: &rng), scale: 1.0)
+    let material = Lambertian(texture: noiseTex)
+    w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: material))
+    w.append(Sphere(center: Point3D(x: 0, y: 2, z: 0), radius: 2, material: material))
+    return BoundingVolumeNode(items: w)
+}
+
+func makeCamera2() -> Camera {
+    Camera(
+        imageWidth: 400,
+        imageHeight: 225,
+        verticalFOV: 20,
+        lookFrom: Point3D(x: 13, y: 2, z: 3),
+        lookAt: .zero
+    )
+}
+
+private func getURL(_ path: String) -> URL {
+    URL(fileURLWithPath: #filePath).deletingLastPathComponent().appending(path: path)
+}
+
+func main() async throws {
+    let world = try makeWorld2()
+    let camera = makeCamera2()
     let t = Date()
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/dropping-balls-checker.ppm"))
+    try image.writePPM(to: getURL("results/perlin-noise.ppm"))
 }
 
 try await main()

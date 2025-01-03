@@ -171,6 +171,7 @@ extension ColorF {
 }
 
 private func toU8(_ x: Double) -> UInt8 {
+    precondition((0...1).contains(x), "Invalid color value: \(x)")
     return UInt8(exactly: ((256.0).nextDown * x).rounded(.down))!
 }
 
