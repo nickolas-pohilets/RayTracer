@@ -9,6 +9,11 @@ public struct AABB {
     private var _min: Point3D
     private var _max: Point3D
 
+    private init(_min: Point3D, _max: Point3D) {
+        self._min = _min
+        self._max = _max
+    }
+
     public init() {
         _min = Point3D(x: .infinity, y: .infinity, z: .infinity)
         _max = -_min
@@ -58,6 +63,10 @@ public struct AABB {
         } else {
             return size.y > size.z ? .y : .z
         }
+    }
+
+    public func translate(by offset: Vector3D) -> Self {
+        return AABB(_min: _min + offset, _max: _max + offset)
     }
 
     func hit(ray: Ray3D) -> ClosedRange<Double>? {

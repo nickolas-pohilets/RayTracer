@@ -132,29 +132,19 @@ extension HittableConvexVolume {
 }
 
 public struct Sphere: HittableVolume {
-    var centerRay: Ray3D
-    var radius: Double
-    var material: any Material
+    public var center: Point3D
+    public var radius: Double
+    public var material: any Material
 
     public init(center: Point3D, radius: Double, material: any Material) {
-        self.centerRay = Ray3D(origin: center, direction: .zero)
+        self.center = center
         self.radius = radius
         self.material = material
-    }
-
-    public init(centerStart: Point3D, centerStop: Point3D, radius: Double, material: any Material) {
-        self.centerRay = Ray3D(origin: centerStart, target: centerStop, normalized: false)
-        self.radius = radius
-        self.material = material
-    }
-
-    public var center: Point3D {
-        return self.centerRay[0.5]
     }
 
     public var boundingBox: AABB {
         let r = Vector3D(x: radius, y: radius, z: radius)
-        return AABB(centerRay.origin - r, centerRay.origin + r, centerRay[1] - r, centerRay[1] + r)
+        return AABB(center - r, center + r)
     }
 
     public func hits(ray: Ray3D, time: Double) -> [HitRange] {
@@ -163,19 +153,18 @@ public struct Sphere: HittableVolume {
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // (ray.direction * t + (ray.origin - C)) • (ray.direction * t + (ray.origin - C)) = radius²
         // t² * ray.direction • ray.direction + t * (2 * ray.direction • (ray.origin - C)) + (ray.origin - C) • (ray.origin - C) - radius² = 0
-        let center = self.centerRay[time]
         let oc = ray.origin - center
         let a = ray.direction • ray.direction
         let b_2 = ray.direction • oc
         let c = oc • oc - radius * radius
         let D_4 = b_2 * b_2 - a * c
         if D_4 < 0 { return [] }
-        let hit1 = hitRecord(for: (-b_2 - D_4.squareRoot()) / a, center: center, in: ray)
-        let hit2 = hitRecord(for: (-b_2 + D_4.squareRoot()) / a, center: center, in: ray)
+        let hit1 = hitRecord(for: (-b_2 - D_4.squareRoot()) / a, in: ray)
+        let hit2 = hitRecord(for: (-b_2 + D_4.squareRoot()) / a, in: ray)
         return [HitRange(hit1, hit2)]
     }
 
-    private func hitRecord(for t: Double, center: Point3D, in ray: Ray3D) -> HitRecord {
+    private func hitRecord(for t: Double, in ray: Ray3D) -> HitRecord {
         let point = ray[t]
         let normal = (point - center) / radius
         let textureCoordinates = Self.textureCoordinates(normal: normal)
@@ -470,6 +459,50 @@ public struct Composition: HittableVolume {
     }
 }
 
+struct MotionBlur<Base: HittableVolume>: HittableVolume {
+    var offset: Vector3D
+    var base: Base
+
+    var center: Point3D {
+        return base.center + offset * 0.5
+    }
+
+    var boundingBox: AABB {
+        let box1 = base.boundingBox
+        let box2 = box1.translate(by: offset)
+        return AABB(box1, box2)
+    }
+
+    func hits(ray: Ray3D, time: Double) -> [HitRange] {
+        let offset = self.offset * time
+        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
+        var hits = base.hits(ray: offsetRay, time: time)
+        for i in hits.indices {
+            hits[i].entry.point += offset
+            hits[i].exit.point += offset
+        }
+        return hits
+    }
+
+    func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        let offset = self.offset * time
+        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
+        guard var h = base.hit(ray: offsetRay, time: time, range: range) else { return nil }
+        h.point += offset
+        return h
+    }
+}
+
+extension MotionBlur: HittableConvexVolume where Base: HittableConvexVolume {
+    func hit(ray: Ray3D, time: Double) -> HitRange? {
+        let offset = self.offset * time
+        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
+        guard var h = base.hit(ray: offsetRay, time: time) else { return nil }
+        h.entry.point += offset
+        h.exit.point += offset
+        return h
+    }
+}
 
 class BoundingVolumeNode: Hittable {
     public private(set) var boundingBox: AABB

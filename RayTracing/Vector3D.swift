@@ -17,7 +17,7 @@ public enum Axis3D: Int, CaseIterable {
     case z
 }
 
-public struct Vector3D {
+public struct Vector3D: AdditiveArithmetic {
     public var x: Double
     public var y: Double
     public var z: Double
