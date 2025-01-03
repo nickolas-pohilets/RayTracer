@@ -11,6 +11,12 @@ infix operator ⨯ : MultiplicationPrecedence
 public typealias Point3D = Vector3D
 public typealias ColorF = Vector3D
 
+public enum Axis3D: Int, CaseIterable {
+    case x
+    case y
+    case z
+}
+
 public struct Vector3D {
     public var x: Double
     public var y: Double
@@ -23,6 +29,23 @@ public struct Vector3D {
         self.x = x
         self.y = y
         self.z = z
+    }
+
+    public init(axis: Axis3D) {
+        switch axis {
+        case .x:
+            self.x = 1
+            self.y = 0
+            self.z = 0
+        case .y:
+            self.x = 0
+            self.y = 1
+            self.z = 0
+        case .z:
+            self.x = 0
+            self.y = 0
+            self.z = 1
+        }
     }
 
     public var length: Double {
@@ -38,21 +61,19 @@ public struct Vector3D {
         return .init(x: x / L, y: y / L, z: z / L)
     }
 
-    public subscript(_ index: Int) -> Double {
+    public subscript(_ axis: Axis3D) -> Double {
         get {
-            switch index {
-            case 0: self.x
-            case 1: self.y
-            case 2: self.z
-            default: fatalError("Index \(index) is out of bounds")
+            switch axis {
+            case .x: self.x
+            case .y: self.y
+            case .z: self.z
             }
         }
         set {
-            switch index {
-            case 0: self.x = newValue
-            case 1: self.y = newValue
-            case 2: self.z = newValue
-            default: fatalError("Index \(index) is out of bounds")
+            switch axis {
+            case .x: self.x = newValue
+            case .y: self.y = newValue
+            case .z: self.z = newValue
             }
         }
     }

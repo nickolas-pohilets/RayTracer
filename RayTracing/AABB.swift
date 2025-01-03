@@ -51,19 +51,19 @@ public struct AABB {
         return _max - _min
     }
 
-    public var longestAxis: Int {
+    public var longestAxis: Axis3D {
         let size = _max - _min
         if size.x > size.y {
-            return size.x > size.z ? 0 : 2
+            return size.x > size.z ? .x : .z
         } else {
-            return size.y > size.z ? 1 : 2
+            return size.y > size.z ? .y : .z
         }
     }
 
     func hit(ray: Ray3D) -> ClosedRange<Double>? {
         var tEntry: Double = -Double.infinity
         var tExit: Double = +Double.infinity
-        for axis in 0..<3 {
+        for axis in Axis3D.allCases {
             let t1 = (_min[axis] - ray.origin[axis]) / ray.direction[axis]
             let t2 = (_max[axis] - ray.origin[axis]) / ray.direction[axis]
             if t1.isFinite && t2.isFinite {
