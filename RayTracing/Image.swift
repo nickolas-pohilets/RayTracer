@@ -22,6 +22,10 @@ struct ColorU8 {
 
     static var black: Self { .init(r: .zero, g: .zero, b: .zero) }
     static var white: Self { .init(r: .max, g: .max, b: .max) }
+
+    var asF: ColorF {
+        ColorF(x: Double(r), y: Double(g), z: Double(b)) / 255.0
+    }
 }
 
 extension OutputStream: @retroactive TextOutputStream {

@@ -4,6 +4,7 @@
 //
 //  Created by Mykola Pokhylets on 24/12/2024.
 //
+import Foundation
 
 public enum Face {
     case front
@@ -17,24 +18,34 @@ public enum Face {
     }
 }
 
+public struct Point2D {
+    public var u: Double
+    public var v: Double
+
+    public init(u: Double, v: Double) {
+        self.u = u
+        self.v = v
+    }
+}
+
 public struct HitRecord {
     var t: Double
     var point: Point3D
     var normal: Vector3D
     var face: Face
-    var u: Double = 0
-    var v: Double = 0
     var material: any Material
+    var textureCoordinates: Point2D
 
-    public init(t: Double, point: Point3D, normal: Vector3D, face: Face, material: any Material) {
+    public init(t: Double, point: Point3D, normal: Vector3D, face: Face, material: any Material, textureCoordinates: Point2D) {
         self.t = t
         self.point = point
         self.normal = normal
         self.face = face
         self.material = material
+        self.textureCoordinates = textureCoordinates
     }
 
-    public init(t: Double, point: Point3D, normal: Vector3D, rayDirection: Vector3D, material: any Material) {
+    public init(t: Double, point: Point3D, normal: Vector3D, rayDirection: Vector3D, material: any Material, textureCoordinates: Point2D) {
         self.t = t
         self.point = point
         if normal • rayDirection > 0 {
@@ -45,10 +56,13 @@ public struct HitRecord {
             self.face = .front
         }
         self.material = material
+        self.textureCoordinates = textureCoordinates
     }
 
     var inverted: HitRecord {
-        .init(t: t, point: point, normal: normal, face: face.inverted, material: material)
+        var result = self
+        result.face = face.inverted
+        return result
     }
 }
 
@@ -164,7 +178,15 @@ public struct Sphere: HittableVolume {
     private func hitRecord(for t: Double, center: Point3D, in ray: Ray3D) -> HitRecord {
         let point = ray[t]
         let normal = (point - center) / radius
-        return HitRecord(t: t, point: point, normal: normal, rayDirection: ray.direction, material: material)
+        let textureCoordinates = Self.textureCoordinates(normal: normal)
+        return HitRecord(t: t, point: point, normal: normal, rayDirection: ray.direction, material: material, textureCoordinates: textureCoordinates)
+    }
+
+    private static func textureCoordinates(normal: Vector3D) -> Point2D {
+        return Point2D(
+            u: (atan2(-normal.z, normal.x) + .pi) / (2 * .pi),
+            v: acos(-normal.y) / .pi
+        )
     }
 }
 
@@ -221,8 +243,8 @@ public struct Cylinder: HittableConvexVolume {
             let tt = dt / denom
 
             if tb.isFinite && tt.isFinite {
-                let hitB = HitRecord(t: tb, point: ray[tb], normal: -axis, rayDirection: ray.direction, material: material)
-                let hitT = HitRecord(t: tt, point: ray[tt], normal: axis, rayDirection: ray.direction, material: material)
+                let hitB = HitRecord(t: tb, point: ray[tb], normal: -axis, rayDirection: ray.direction, material: material, textureCoordinates: Point2D(u: 0, v: 0))
+                let hitT = HitRecord(t: tt, point: ray[tt], normal: axis, rayDirection: ray.direction, material: material, textureCoordinates: Point2D(u: 0, v: 0))
                 hitRanges.append(HitRange(hitB, hitT))
             } else {
                 // Ray is parallel to the bottom planes
@@ -254,8 +276,8 @@ public struct Cylinder: HittableConvexVolume {
                 let p2 = ray[t2]
                 let n1 = (p1 - axisRay.projection(of: p1)).normalized()
                 let n2 = (p2 - axisRay.projection(of: p2)).normalized()
-                let hit1 = HitRecord(t: t1, point: p1, normal: n1, rayDirection: ray.direction,  material: material)
-                let hit2 = HitRecord(t: t2, point: p2, normal: n2, rayDirection: ray.direction,  material: material)
+                let hit1 = HitRecord(t: t1, point: p1, normal: n1, rayDirection: ray.direction,  material: material, textureCoordinates: Point2D(u: 0, v: 0))
+                let hit2 = HitRecord(t: t2, point: p2, normal: n2, rayDirection: ray.direction,  material: material, textureCoordinates: Point2D(u: 0, v: 0))
                 hitRanges.append(HitRange(hit1, hit2))
             } else {
                 // Ray is parallel to the axis

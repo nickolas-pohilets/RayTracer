@@ -7,7 +7,7 @@
 
 import Foundation
 
-func makeWorld() -> some Hittable {
+func makeWorld() throws -> some Hittable {
     var w: [any Hittable] = []
 
     let checker = CheckerTexture(scale: 0.32, even: ColorF(x: 0.2, y: 0.3, z: 0.1), odd: ColorF(x: 0.9, y: 0.9, z: 0.9))
@@ -47,7 +47,9 @@ func makeWorld() -> some Hittable {
     let material1 = Dielectric(refractionIndex: 1.5)
     w.append(Sphere(center: Point3D(x: 0, y: 1, z: 0), radius: 1.0, material: material1))
 
-    let material2 = Lambertian(albedo: ColorF(x: 0.4, y: 0.2, z: 0.1))
+
+    let image = try Image.load(url: getURL("textures/earthmap.jpg"))
+    let material2 = Lambertian(texture: ImageTexture(image: image))
     w.append(Sphere(center: Point3D(x: -4, y: 1, z: 0), radius: 1.0, material: material2))
 
     let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
@@ -61,17 +63,14 @@ private func getURL(_ path: String) -> URL {
 }
 
 func main() async throws {
-//    let texture = try Image.load(url: getURL("textures/earthmap.jpg"))
-//    try texture.writePPM(to: getURL("textures/earthmap.ppm"))
-//
-    let world = makeWorld()
+    let world = try makeWorld()
 
     let imageWidth = 400
     let camera = Camera(
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
         verticalFOV: 20,
-        lookFrom: Point3D(x: 13, y: 2, z: 3),
+        lookFrom: Point3D(x: -13, y: 2, z: 3),
         lookAt: Point3D(x: 0, y: 0, z: 0),
         defocusAngle: 0.6,
         focusDistance: 10

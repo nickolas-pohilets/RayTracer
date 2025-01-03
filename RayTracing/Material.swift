@@ -30,7 +30,7 @@ public struct Lambertian: Material {
                 break
             }
         }
-        let albedo = texture[u: hit.u, v: hit.v, point: hit.point]
+        let albedo = texture[hit.textureCoordinates, point: hit.point]
         return .some((attenuation: albedo, scattered: Ray3D(origin: hit.point, direction: direction)))
     }
 }

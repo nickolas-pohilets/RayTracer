@@ -6,7 +6,7 @@
 //
 
 public protocol Texture {
-    subscript(u u: Double, v v: Double, point point: Point3D) -> ColorF { get }
+    subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF { get }
 }
 
 public struct SolidColor: Texture {
@@ -20,10 +20,10 @@ public struct SolidColor: Texture {
         self.albedo = ColorF(x: r, y: g, z: b)
     }
 
-    public subscript(u u: Double, v v: Double, point point: Point3D) -> ColorF { albedo }
+    public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF { albedo }
 }
 
-class CheckerTexture: Texture {
+struct CheckerTexture: Texture {
     var invScale: Double
     var even: any Texture
     var odd: any Texture
@@ -40,11 +40,29 @@ class CheckerTexture: Texture {
         self.odd = SolidColor(albedo: odd)
     }
 
-    public subscript(u u: Double, v v: Double, point point: Point3D) -> ColorF {
+    public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
         let xInteger = Int((invScale * point.x).rounded(.down))
         let yInteger = Int((invScale * point.y).rounded(.down))
         let zInteger = Int((invScale * point.z).rounded(.down))
         let isEven = (xInteger + yInteger + zInteger) % 2 == 0
-        return isEven ? even[u: u, v: v, point: point] : odd[u: u, v: v, point: point]
+        return isEven ? even[coordinates, point: point] : odd[coordinates, point: point]
     }
-};
+}
+
+struct ImageTexture: Texture {
+    var image: Image
+
+    public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
+        let i: Double = (1.0 - min(1, max(coordinates.v, 0))) * Double(image.height) - 0.5
+        let j: Double = min(1, max(coordinates.u, 0)) * Double(image.width) - 0.5
+        let i1 = Int(i), i2 = min(i1 + 1, image.height - 1)
+        let j1 = Int(j), j2 = min(j1 + 1, image.width - 1)
+        let a = (i - Double(i1))
+        let b = (j - Double(j1))
+
+        let c1 = image[i1, j1].asF * (1 - b) + image[i1, j2].asF * b
+        let c2 = image[i2, j1].asF * (1 - b) + image[i2, j2].asF * b
+        return c1 * (1 - a) + c2 * a
+    }
+
+}
