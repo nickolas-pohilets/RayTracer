@@ -76,9 +76,9 @@ func makeWorld2() throws -> some Hittable {
 
     var rng = SystemRandomNumberGenerator()
     let noiseTex = NoiseTexture(noise: PerlinNoise(using: &rng), scale: 1.0)
-    let material = Lambertian(texture: noiseTex)
-    w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: material))
-    w.append(Sphere(center: Point3D(x: 0, y: 2, z: 0), radius: 2, material: material))
+    let marbleTex = Marble(noise: PerlinNoise(using: &rng), scale: 1.0)
+    w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: Lambertian(texture: noiseTex)))
+    w.append(Sphere(center: Point3D(x: 0, y: 2, z: 0), radius: 2, material: Lambertian(texture: marbleTex)))
     return BoundingVolumeNode(items: w)
 }
 

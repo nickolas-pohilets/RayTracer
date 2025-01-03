@@ -79,6 +79,17 @@ struct NoiseTexture: Texture {
     }
 }
 
+struct Marble: Texture {
+    var noise: PerlinNoise
+    var scale: Double
+//    var turbulence: Int = 1
+
+    public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
+        let grey = (1 + sin(scale * point.z + 10 * noise[point, turbulence: 7])) * 0.5
+        return ColorF(x: grey, y: grey, z: grey)
+    }
+}
+
 public struct PerlinNoise {
     private var vectors: [Vector3D]
     private var permX: [UInt8]
