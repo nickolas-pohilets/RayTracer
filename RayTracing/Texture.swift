@@ -131,6 +131,7 @@ public struct PerlinNoise {
                 }
             }
         }
+        assert(((-1)...1).contains(result))
         return result
     }
 
@@ -144,6 +145,7 @@ public struct PerlinNoise {
             weight *= 0.5
             p = p * 2.0
         }
+        assert(((-1)...1).contains(accum))
         return accum
     }
 }
