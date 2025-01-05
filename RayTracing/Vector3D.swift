@@ -171,6 +171,10 @@ public struct Vector3D: AdditiveArithmetic {
     public func refractedOrReflected(normal: Vector3D, ηRatio: Double, reflectanceRandom: Double) -> Vector3D {
         return refracted(normal: normal, ηRatio: ηRatio, reflectanceRandom: reflectanceRandom) ?? reflected(normal: normal)
     }
+
+    public static func interpolate(_ v0: Self, _ v1: Self, t: Double) -> Self {
+        return (1 - t) * v0 + t * v1
+    }
 }
 
 extension ColorF {
