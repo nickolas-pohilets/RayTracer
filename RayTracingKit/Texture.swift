@@ -68,10 +68,14 @@ struct ImageTexture: Texture {
 
 }
 
-struct NoiseTexture: Texture {
+public struct NoiseTexture: Texture {
     var noise: PerlinNoise
     var scale: Double
-//    var turbulence: Int = 1
+
+    public init(noise: PerlinNoise, scale: Double) {
+        self.noise = noise
+        self.scale = scale
+    }
 
     public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
         let grey = abs(noise[scale * point, turbulence: 7])
@@ -79,10 +83,14 @@ struct NoiseTexture: Texture {
     }
 }
 
-struct Marble: Texture {
+public struct Marble: Texture {
     var noise: PerlinNoise
     var scale: Double
-//    var turbulence: Int = 1
+
+    public init(noise: PerlinNoise, scale: Double) {
+        self.noise = noise
+        self.scale = scale
+    }
 
     public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
         let grey = (1 + sin(scale * point.z + 10 * noise[point, turbulence: 7])) * 0.5

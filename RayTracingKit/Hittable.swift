@@ -459,21 +459,26 @@ public struct Composition: HittableVolume {
     }
 }
 
-struct MotionBlur<Base: HittableVolume>: HittableVolume {
+public struct MotionBlur<Base: HittableVolume>: HittableVolume {
     var offset: Vector3D
     var base: Base
 
-    var center: Point3D {
+    public init(offset: Vector3D, base: Base) {
+        self.offset = offset
+        self.base = base
+    }
+
+    public var center: Point3D {
         return base.center + offset * 0.5
     }
 
-    var boundingBox: AABB {
+    public var boundingBox: AABB {
         let box1 = base.boundingBox
         let box2 = box1.translate(by: offset)
         return AABB(box1, box2)
     }
 
-    func hits(ray: Ray3D, time: Double) -> [HitRange] {
+    public func hits(ray: Ray3D, time: Double) -> [HitRange] {
         let offset = self.offset * time
         let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
         var hits = base.hits(ray: offsetRay, time: time)
@@ -484,7 +489,7 @@ struct MotionBlur<Base: HittableVolume>: HittableVolume {
         return hits
     }
 
-    func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
         let offset = self.offset * time
         let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
         guard var h = base.hit(ray: offsetRay, time: time, range: range) else { return nil }
@@ -494,7 +499,7 @@ struct MotionBlur<Base: HittableVolume>: HittableVolume {
 }
 
 extension MotionBlur: HittableConvexVolume where Base: HittableConvexVolume {
-    func hit(ray: Ray3D, time: Double) -> HitRange? {
+    public func hit(ray: Ray3D, time: Double) -> HitRange? {
         let offset = self.offset * time
         let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
         guard var h = base.hit(ray: offsetRay, time: time) else { return nil }
@@ -504,7 +509,7 @@ extension MotionBlur: HittableConvexVolume where Base: HittableConvexVolume {
     }
 }
 
-class BoundingVolumeNode: Hittable {
+public class BoundingVolumeNode: Hittable {
     public private(set) var boundingBox: AABB
     private var leftChild: any Hittable
     private var rightChild: any Hittable

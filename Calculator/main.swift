@@ -2,7 +2,7 @@
 //  main.swift
 //  Calculator
 //
-//  Created by Nickolas Pokhylets on 25/12/2024.
+//  Created by Mykola Pokhylets on 25/12/2024.
 //
 
 import Foundation

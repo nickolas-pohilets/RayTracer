@@ -8,10 +8,10 @@ import Foundation
 import UniformTypeIdentifiers
 import CoreGraphics
 
-struct ColorU8 {
-    var r: UInt8
-    var g: UInt8
-    var b: UInt8
+public struct ColorU8 {
+    public var r: UInt8
+    public var g: UInt8
+    public var b: UInt8
     private var _padding: UInt8 = 0
 
     public init(r: UInt8, g: UInt8, b: UInt8) {
@@ -20,10 +20,10 @@ struct ColorU8 {
         self.b = b
     }
 
-    static var black: Self { .init(r: .zero, g: .zero, b: .zero) }
-    static var white: Self { .init(r: .max, g: .max, b: .max) }
+    public static var black: Self { .init(r: .zero, g: .zero, b: .zero) }
+    public static var white: Self { .init(r: .max, g: .max, b: .max) }
 
-    var asF: ColorF {
+    public var asF: ColorF {
         ColorF(x: Double(r), y: Double(g), z: Double(b)) / 255.0
     }
 }
@@ -40,18 +40,18 @@ extension OutputStream: @retroactive TextOutputStream {
     }
 }
 
-struct Image {
-    let width: Int
-    let height: Int
+public struct Image {
+    public let width: Int
+    public let height: Int
     private var data: [ColorU8]
 
-    init(width: Int, height: Int, fillColor: ColorU8 = .black) {
+    public init(width: Int, height: Int, fillColor: ColorU8 = .black) {
         self.width = width
         self.height = height
         self.data = [ColorU8].init(repeating: fillColor, count: width * height)
     }
 
-    subscript(_ i: Int, _ j: Int) -> ColorU8 {
+    public subscript(_ i: Int, _ j: Int) -> ColorU8 {
         get {
             checkBounds(i, j)
             return data[i * width + j]
@@ -83,7 +83,7 @@ struct Image {
         }
     }
 
-    func writePPM<Target: TextOutputStream>(to target: inout Target) {
+    public func writePPM<Target: TextOutputStream>(to target: inout Target) {
         print("P3", to: &target)
         print(width, height, to: &target)
         print(255, to: &target)
@@ -96,7 +96,7 @@ struct Image {
         }
     }
 
-    func writePPM(to url: URL) throws {
+    public func writePPM(to url: URL) throws {
         let directory = url.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let stream = OutputStream(url: url, append: false) {

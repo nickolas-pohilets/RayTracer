@@ -7,10 +7,15 @@
 
 import Foundation
 
-struct Camera {
-    struct RenderConfig {
-        var samplesPerPixel = 10 // Count of random samples for each pixel
-        var maxDepth = 10
+public struct Camera {
+    public struct RenderConfig {
+        var samplesPerPixel: Int // Count of random samples for each pixel
+        var maxDepth: Int
+
+        public init(samplesPerPixel: Int = 10, maxDepth: Int = 10) {
+            self.samplesPerPixel = samplesPerPixel
+            self.maxDepth = maxDepth
+        }
     }
 
     private var imageWidth: Int
@@ -21,7 +26,7 @@ struct Camera {
     private var viewportV: Vector3D
     private var defocusDisk: (u: Vector3D, v: Vector3D)? // Defocus disk axes
 
-    init(
+    public init(
         imageWidth: Int,
         imageHeight: Int,
         verticalFOV: Double = 90,
@@ -54,7 +59,7 @@ struct Camera {
         }
     }
 
-    func render(world: some Hittable, config: RenderConfig = .init()) async -> Image {
+    public func render(world: some Hittable, config: RenderConfig = .init()) async -> Image {
         var image = Image(width: imageWidth, height: imageHeight)
         await withTaskGroup(of: (Int, Image).self) { group in
             var rng = SystemRandomNumberGenerator()

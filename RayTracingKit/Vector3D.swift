@@ -186,7 +186,7 @@ extension ColorF {
         .init(x: x.squareRoot(), y: y.squareRoot(), z: z.squareRoot())
     }
 
-    static func random(in range: ClosedRange<Double> = 0...1, using rng: inout some RandomNumberGenerator) -> ColorF {
+    public static func random(in range: ClosedRange<Double> = 0...1, using rng: inout some RandomNumberGenerator) -> ColorF {
         return ColorF(
             x: .random(in: range, using: &rng),
             y: .random(in: range, using: &rng),

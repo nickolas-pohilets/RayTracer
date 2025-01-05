@@ -6,6 +6,21 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4A1A08542D2AFD9500FD2AC2 /* RayTracingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */; };
+		4A1A08632D2AFD9E00FD2AC2 /* RayTracingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4A1A08552D2AFD9500FD2AC2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4A1A07232D1B501A00FD2AC2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4A1A084B2D2AFD9500FD2AC2;
+			remoteInfo = RayTracingKit;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		4A1A07292D1B501A00FD2AC2 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -30,7 +45,19 @@
 /* Begin PBXFileReference section */
 		4A1A072B2D1B501A00FD2AC2 /* RayTracing */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = RayTracing; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A1A07862D1C682D00FD2AC2 /* Calculator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Calculator; sourceTree = BUILT_PRODUCTS_DIR; };
+		4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RayTracingKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayTracingKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4A1A085F2D2AFD9500FD2AC2 /* Exceptions for "RayTracingKit" folder in "RayTracingKit" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			publicHeaders = (
+				RayTracingKit.h,
+			);
+			target = 4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4A1A072D2D1B501A00FD2AC2 /* RayTracing */ = {
@@ -43,6 +70,19 @@
 			path = Calculator;
 			sourceTree = "<group>";
 		};
+		4A1A084D2D2AFD9500FD2AC2 /* RayTracingKit */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4A1A085F2D2AFD9500FD2AC2 /* Exceptions for "RayTracingKit" folder in "RayTracingKit" target */,
+			);
+			path = RayTracingKit;
+			sourceTree = "<group>";
+		};
+		4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RayTracingKitTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +90,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A1A08632D2AFD9E00FD2AC2 /* RayTracingKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,6 +98,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A1A08492D2AFD9500FD2AC2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A1A08502D2AFD9500FD2AC2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A1A08542D2AFD9500FD2AC2 /* RayTracingKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,6 +124,9 @@
 			children = (
 				4A1A072D2D1B501A00FD2AC2 /* RayTracing */,
 				4A1A07872D1C682D00FD2AC2 /* Calculator */,
+				4A1A084D2D2AFD9500FD2AC2 /* RayTracingKit */,
+				4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */,
+				4A1A08622D2AFD9E00FD2AC2 /* Frameworks */,
 				4A1A072C2D1B501A00FD2AC2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -77,11 +136,30 @@
 			children = (
 				4A1A072B2D1B501A00FD2AC2 /* RayTracing */,
 				4A1A07862D1C682D00FD2AC2 /* Calculator */,
+				4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */,
+				4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
+		4A1A08622D2AFD9E00FD2AC2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		4A1A08472D2AFD9500FD2AC2 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
 		4A1A072A2D1B501A00FD2AC2 /* RayTracing */ = {
@@ -128,6 +206,52 @@
 			productReference = 4A1A07862D1C682D00FD2AC2 /* Calculator */;
 			productType = "com.apple.product-type.tool";
 		};
+		4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A1A08602D2AFD9500FD2AC2 /* Build configuration list for PBXNativeTarget "RayTracingKit" */;
+			buildPhases = (
+				4A1A08472D2AFD9500FD2AC2 /* Headers */,
+				4A1A08482D2AFD9500FD2AC2 /* Sources */,
+				4A1A08492D2AFD9500FD2AC2 /* Frameworks */,
+				4A1A084A2D2AFD9500FD2AC2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4A1A084D2D2AFD9500FD2AC2 /* RayTracingKit */,
+			);
+			name = RayTracingKit;
+			packageProductDependencies = (
+			);
+			productName = RayTracingKit;
+			productReference = 4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		4A1A08522D2AFD9500FD2AC2 /* RayTracingKitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A1A08612D2AFD9500FD2AC2 /* Build configuration list for PBXNativeTarget "RayTracingKitTests" */;
+			buildPhases = (
+				4A1A084F2D2AFD9500FD2AC2 /* Sources */,
+				4A1A08502D2AFD9500FD2AC2 /* Frameworks */,
+				4A1A08512D2AFD9500FD2AC2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4A1A08562D2AFD9500FD2AC2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */,
+			);
+			name = RayTracingKitTests;
+			packageProductDependencies = (
+			);
+			productName = RayTracingKitTests;
+			productReference = 4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -142,6 +266,12 @@
 						CreatedOnToolsVersion = 16.1;
 					};
 					4A1A07852D1C682D00FD2AC2 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					4A1A084B2D2AFD9500FD2AC2 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					4A1A08522D2AFD9500FD2AC2 = {
 						CreatedOnToolsVersion = 16.1;
 					};
 				};
@@ -162,9 +292,28 @@
 			targets = (
 				4A1A072A2D1B501A00FD2AC2 /* RayTracing */,
 				4A1A07852D1C682D00FD2AC2 /* Calculator */,
+				4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */,
+				4A1A08522D2AFD9500FD2AC2 /* RayTracingKitTests */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4A1A084A2D2AFD9500FD2AC2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A1A08512D2AFD9500FD2AC2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4A1A07272D1B501A00FD2AC2 /* Sources */ = {
@@ -181,7 +330,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4A1A08482D2AFD9500FD2AC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A1A084F2D2AFD9500FD2AC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4A1A08562D2AFD9500FD2AC2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */;
+			targetProxy = 4A1A08552D2AFD9500FD2AC2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4A1A07302D1B501A00FD2AC2 /* Debug */ = {
@@ -347,6 +518,106 @@
 			};
 			name = Release;
 		};
+		4A1A085B2D2AFD9500FD2AC2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RayTracingKit;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		4A1A085C2D2AFD9500FD2AC2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RayTracingKit;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		4A1A085D2D2AFD9500FD2AC2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RayTracingKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4A1A085E2D2AFD9500FD2AC2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.RayTracingKitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -373,6 +644,24 @@
 			buildConfigurations = (
 				4A1A078B2D1C682D00FD2AC2 /* Debug */,
 				4A1A078C2D1C682D00FD2AC2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A1A08602D2AFD9500FD2AC2 /* Build configuration list for PBXNativeTarget "RayTracingKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A1A085B2D2AFD9500FD2AC2 /* Debug */,
+				4A1A085C2D2AFD9500FD2AC2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A1A08612D2AFD9500FD2AC2 /* Build configuration list for PBXNativeTarget "RayTracingKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A1A085D2D2AFD9500FD2AC2 /* Debug */,
+				4A1A085E2D2AFD9500FD2AC2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
