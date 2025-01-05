@@ -11,13 +11,13 @@ infix operator ⨯ : MultiplicationPrecedence
 public typealias Point3D = Vector3D
 public typealias ColorF = Vector3D
 
-public enum Axis3D: Int, CaseIterable {
+public enum Axis3D: Int, CaseIterable, Equatable {
     case x
     case y
     case z
 }
 
-public struct Vector3D: AdditiveArithmetic {
+public struct Vector3D: AdditiveArithmetic, Equatable {
     public var x: Double
     public var y: Double
     public var z: Double
@@ -192,6 +192,12 @@ extension ColorF {
             y: .random(in: range, using: &rng),
             z: .random(in: range, using: &rng)
         )
+    }
+
+    public func validate() {
+        assert((0...1).contains(x))
+        assert((0...1).contains(y))
+        assert((0...1).contains(z))
     }
 }
 

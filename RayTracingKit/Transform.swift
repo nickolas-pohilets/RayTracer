@@ -6,7 +6,7 @@
 //
 import Foundation
 
-public struct Transform3D {
+public struct Transform3D: Equatable {
     public let rotation: Quaternion
     public let translation: Vector3D
 
@@ -49,7 +49,11 @@ public struct Transform3D {
     }
 
     public var inverse: Transform3D {
-        Transform3D(rotation: rotation.inverse, translation: -translation)
+        // Ri * (R * p + T) + Ti = p
+        // (Ri * R * p) + Ri * T + Ti = p
+        // Ti = -Ri * T
+        let rInv = rotation.inverse
+        return Transform3D(rotation: rInv, translation: -rInv.rotate(translation))
     }
 
     public func transform(_ p: Point3D) -> Point3D {
@@ -137,7 +141,7 @@ private func normalizeAngle(_ x: Double) -> Double {
 }
 
 /// Unit quaternion representing orientation
-public struct Quaternion {
+public struct Quaternion: Equatable {
     public let w: Double
     public let v: Vector3D
 

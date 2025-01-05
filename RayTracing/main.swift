@@ -14,38 +14,6 @@ func makeWorld1() throws -> some Hittable {
     let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
     w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: ground))
 
-    var rng = SystemRandomNumberGenerator()
-
-    for a in -11..<11 {
-        for b in -11..<11 {
-            let chooseMat = Double.random(in: 0..<1)
-            let center = Point3D(x: Double(a) + 0.9*Double.random(in: 0..<1), y: 0.2, z: Double(b) + 0.9*Double.random(in: 0..<1))
-
-            if (center - Point3D(x: 4, y: 0.2, z: 0)).length > 0.9 {
-                if (chooseMat < 0.8) {
-                    // diffuse
-                    let albedo = ColorF.random(using: &rng) * ColorF.random(using: &rng)
-                    let material = Lambertian(albedo: albedo)
-
-                    let sphere = Sphere(center: center, radius: 0.2, material: material)
-                    let offset = Vector3D(x: 0, y: .random(in: 0...0.5, using: &rng), z: 0)
-                    let blur = MotionBlur(transform: .init(translation: offset), base: sphere)
-                    w.append(blur)
-                } else if (chooseMat < 0.95) {
-                    // metal
-                    let albedo = ColorF.random(in: 0.5...1, using: &rng)
-                    let fuzz = Double.random(in: 0...0.5)
-                    let material = Metal(albedo: albedo, fuzz: fuzz)
-                    w.append(Sphere(center: center, radius: 0.2, material: material))
-                } else {
-                    // glass
-                    let material = Dielectric(refractionIndex: 1.5);
-                    w.append(Sphere(center: center, radius: 0.2, material: material))
-                }
-            }
-        }
-    }
-
     let material1 = Dielectric(refractionIndex: 1.5)
     w.append(Sphere(center: Point3D(x: 0, y: 1, z: 0), radius: 1.0, material: material1))
 
@@ -57,13 +25,26 @@ func makeWorld1() throws -> some Hittable {
             transform: .rotation(degrees: 23, axis: .z) * .rotation(degrees: 190, axis: .y),
             base: sphere
         )
-        let t2 = MotionBlur(transform: .rotation(degrees: 30, axis: .y), base: t1)
-        let t3 = Transformed(transform: .translation(x: -4, y: 1, z: 0), base: t2)
-        w.append(t3)
+        let t2 = Transformed(transform: .translation(x: -4, y: 1, z: 0), base: t1)
+        w.append(t2)
     }
 
     let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
     w.append(Sphere(center: Point3D(x: 4, y: 1, z: 0), radius: 1.0, material: material3))
+
+    do {
+        let image = try Image.load(url: getURL("textures/barrel.jpg"))
+        let top = Lambertian(texture: ImageTexture(image: image, originX: 128, originY: 320, width: 192, height: 192))
+        let bottom = Lambertian(texture: ImageTexture(image: image, originX: 320, originY: 320, width: 192, height: 192))
+        let side = Lambertian(texture: ImageTexture(image: image, originX: 0, originY: 320, width: 512, height: -320))
+        let c = Cylinder(radius: 0.5, height: 2, bottom: bottom, top: top, side: side)
+        let t1 = Transformed(transform: .translation(x: 0, y: 0, z: 3), base: c)
+        w.append(t1)
+        let t2 = Transformed(transform: .translation(x: -1.2, y: 0, z: 2.7) * .rotation(degrees: 115, axis: .y), base: c)
+        w.append(t2)
+        let t3 = Transformed(transform: .translation(x: -1.7, y: 0.5, z: 3.5) * .rotation(degrees: -30, axis: .y) * .rotation(degrees: -90, axis: .z), base: c)
+        w.append(t3)
+    }
 
     return BoundingVolumeNode(items: w)
 }
@@ -74,7 +55,7 @@ func makeCamera1() -> Camera {
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
         verticalFOV: 20,
-        lookFrom: Point3D(x: -10, y: 2, z: 8),
+        lookFrom: Point3D(x: -10, y: 6, z: 8),
         lookAt: Point3D(x: 0, y: 0, z: 0),
         defocusAngle: 0.6,
         focusDistance: 10
@@ -113,7 +94,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/dropping-balls-rotation-blur.ppm"))
+    try image.writePPM(to: getURL("results/barrel.ppm"))
 }
 
 try await main()

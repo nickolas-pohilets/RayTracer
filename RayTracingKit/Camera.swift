@@ -116,6 +116,7 @@ public struct Camera {
         }
         if let hit = world.hit(ray: ray, time: time, range: 0.001..<Double.infinity) {
             if let (attenuation, scatered) = hit.material.scatter(ray: ray, hit: hit, using: &rng) {
+                attenuation.validate()
                 return attenuation * rayColor(scatered, time: time, world: world, depth: depth - 1, using: &rng)
             }
             return .zero

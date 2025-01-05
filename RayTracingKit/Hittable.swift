@@ -189,32 +189,31 @@ public struct Sphere: HittableVolume {
 }
 
 public struct Cylinder: HittableConvexVolume {
-    public var bottomCenter: Point3D
-    public var topCenter: Point3D
     public var radius: Double
-    var material: any Material
+    public var height: Double
+    var bottom: any Material
+    var top: any Material
+    var side: any Material
 
-    public init(bottomCenter: Point3D, topCenter: Point3D, radius: Double, material: any Material) {
-        self.bottomCenter = bottomCenter
-        self.topCenter = topCenter
+    public init(radius: Double, height: Double, bottom: any Material, top: any Material, side: any Material) {
+        assert(radius >= 0)
+        assert(height >= 0)
         self.radius = radius
-        self.material = material
+        self.height = height
+        self.bottom = bottom
+        self.top = top
+        self.side = side
     }
 
     public var center: Point3D {
-        return (topCenter + bottomCenter) / 2
+        return Vector3D(x: 0, y: height * 0.5, z: 0)
     }
 
     public var boundingBox: AABB {
-        let height = (topCenter - bottomCenter)
-        let heightDir = height.normalized()
-        let size = Vector3D(
-            x: abs(height.x) * 0.5 + radius * max(0, 1 - heightDir.x * heightDir.x).squareRoot(),
-            y: abs(height.y) * 0.5 + radius * max(0, 1 - heightDir.y * heightDir.y).squareRoot(),
-            z: abs(height.z) * 0.5 + radius * max(0, 1 - heightDir.z * heightDir.z).squareRoot()
+        AABB(
+            Vector3D(x: -radius, y: 0, z: -radius),
+            Vector3D(x: +radius, y: height, z: +radius)
         )
-        let center = self.center
-        return AABB(center - size, center + size)
     }
 
     public func hit(ray: Ray3D, time: Double) -> HitRange? {
@@ -224,12 +223,13 @@ public struct Cylinder: HittableConvexVolume {
         // Qr = Q - Qp
         // Qr • Qr = radius²
 
-        let sizedAxis = (topCenter - bottomCenter)
-        let height = sizedAxis.length
-        let axis = sizedAxis / height
+        let axis = Vector3D(x: 0, y: 1, z: 0)
 
-        let ob = ray.origin - bottomCenter
-        let ot = ray.origin - topCenter
+        let ob = ray.origin - .zero
+        let ot = ray.origin - Vector3D(x: 0, y: height, z: 0)
+
+        let textureWidth = radius * 2 * .pi
+        let textureHeight = height + 2 * radius
 
         var hitRanges: [HitRange] = []
         do {
@@ -241,8 +241,12 @@ public struct Cylinder: HittableConvexVolume {
             let tt = dt / denom
 
             if tb.isFinite && tt.isFinite {
-                let hitB = HitRecord(t: tb, point: ray[tb], normal: -axis, rayDirection: ray.direction, material: material, textureCoordinates: Point2D(u: 0, v: 0))
-                let hitT = HitRecord(t: tt, point: ray[tt], normal: axis, rayDirection: ray.direction, material: material, textureCoordinates: Point2D(u: 0, v: 0))
+                let pb = ray[tb]
+                let textureCoordinatesB = Point2D(u: 0.5 + pb.x / (2 * radius), v: 0.5 + pb.z / (2 * radius))
+                let hitB = HitRecord(t: tb, point: pb, normal: -axis, rayDirection: ray.direction, material: bottom, textureCoordinates: textureCoordinatesB)
+                let pt = ray[tt]
+                let textureCoordinatesT = Point2D(u: 0.5 + pt.x / (2 * radius), v: 0.5 + pt.z / (2 * radius))
+                let hitT = HitRecord(t: tt, point: pt, normal: axis, rayDirection: ray.direction, material: top, textureCoordinates: textureCoordinatesT)
                 hitRanges.append(HitRange(hitB, hitT))
             } else {
                 // Ray is parallel to the bottom planes
@@ -267,15 +271,17 @@ public struct Cylinder: HittableConvexVolume {
             let t1 = (-b_2 - D_4_root) / a
             let t2 = (-b_2 + D_4_root) / a
 
-            let axisRay = Ray3D(origin: bottomCenter, direction: axis)
+            let axisRay = Ray3D(origin: .zero, direction: axis)
 
             if t1.isFinite && t2.isFinite {
                 let p1 = ray[t1]
                 let p2 = ray[t2]
                 let n1 = (p1 - axisRay.projection(of: p1)).normalized()
                 let n2 = (p2 - axisRay.projection(of: p2)).normalized()
-                let hit1 = HitRecord(t: t1, point: p1, normal: n1, rayDirection: ray.direction,  material: material, textureCoordinates: Point2D(u: 0, v: 0))
-                let hit2 = HitRecord(t: t2, point: p2, normal: n2, rayDirection: ray.direction,  material: material, textureCoordinates: Point2D(u: 0, v: 0))
+                let tc1 = Point2D(u: atan2(p1.z, p1.x) / (2 * .pi), v: p1.y / height)
+                let tc2 = Point2D(u: atan2(p2.z, p2.x) / (2 * .pi), v: p2.y / height)
+                let hit1 = HitRecord(t: t1, point: p1, normal: n1, rayDirection: ray.direction,  material: side, textureCoordinates: tc1)
+                let hit2 = HitRecord(t: t2, point: p2, normal: n2, rayDirection: ray.direction,  material: side, textureCoordinates: tc2)
                 hitRanges.append(HitRange(hit1, hit2))
             } else {
                 // Ray is parallel to the axis

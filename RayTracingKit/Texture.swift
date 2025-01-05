@@ -52,23 +52,84 @@ struct CheckerTexture: Texture {
 
 public struct ImageTexture: Texture {
     public var image: Image
+    public let originX: Int
+    public let originY: Int
+    public let width: Int
+    public let height: Int
+    public let invertX: Bool
+    public let invertY: Bool
+    public let wrapX: Bool
+    public let wrapY: Bool
 
-    public init(image: Image) {
+    public init(image: Image, wrapX: Bool = true, wrapY: Bool = true) {
+        self.init(image: image, originX: 0, originY: image.height - 1, width: image.width, height: -image.height)
+    }
+
+    public init(image: Image, originX: Int, originY: Int, width: Int, height: Int, wrapX: Bool = true, wrapY: Bool = true) {
         self.image = image
+        self.originX = originX
+        self.originY = originY
+        self.width = abs(width)
+        self.height = abs(height)
+        self.invertX = width < 0
+        self.invertY = height < 0
+        self.wrapX = wrapX
+        self.wrapY = wrapY
     }
 
     public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
-        let i: Double = (1.0 - min(1, max(coordinates.v, 0))) * Double(image.height) - 0.5
-        let j: Double = min(1, max(coordinates.u, 0)) * Double(image.width) - 0.5
-        let i1 = Int(i), i2 = min(i1 + 1, image.height - 1)
-        let j1 = Int(j), j2 = min(j1 + 1, image.width - 1)
+        let i: Double = coordinates.v * Double(height) - 0.5
+        let j: Double = coordinates.u * Double(width) - 0.5
+        let i1 = Int(i.rounded(.down)), i2 = i1 + 1
+        let j1 = Int(j.rounded(.down)), j2 = j1 + 1
         let a = (i - Double(i1))
         let b = (j - Double(j1))
 
-        let c1 = image[i1, j1].asF * (1 - b) + image[i1, j2].asF * b
-        let c2 = image[i2, j1].asF * (1 - b) + image[i2, j2].asF * b
-        return c1 * (1 - a) + c2 * a
+        let c1 = getPixel(i1, j1) * (1 - b) + getPixel(i1, j2) * b
+        let c2 = getPixel(i2, j1) * (1 - b) + getPixel(i2, j2) * b
+        let r = c1 * (1 - a) + c2 * a
+        r.validate()
+        return r
     }
+
+    private func getPixel(_ i: Int, _ j: Int) -> ColorF {
+        let ix = originY + Self.clip(i, height, wrapY) * (invertY ? -1 : +1)
+        let jx = originX + Self.clip(j, width, wrapX) * (invertX ? -1 : +1)
+        let r = image[ix, jx].asF
+        r.validate()
+        return r
+    }
+
+    static func clip(_ index: Int, _ size: Int, _ wrap: Bool) -> Int {
+        assert(size > 0)
+        if index < 0 {
+            if wrap {
+                return size + (index % size)
+            } else {
+                return 0
+            }
+        } else if index >= size {
+            if wrap {
+                return (index % size)
+            } else {
+                return size - 1
+            }
+        } else {
+            return index
+        }
+    }
+
+//    private func toIndexY(_ i: Double) -> Int {
+//        let top = min(originY, originY + height)
+//        let bottom = max(originY, originY + height)
+//        let ix = Int(i - 0.5)
+//
+//
+//    }
+//
+//    private func toIndexX(_ j: Double) -> Int {
+//
+//    }
 
 }
 
