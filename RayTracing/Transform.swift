@@ -42,6 +42,68 @@ public struct Transform3D {
             translation: .interpolate(t0.translation, t1.translation, t: t)
         )
     }
+
+    public func boundingBox(for p: Point3D) -> AABB {
+        let p1 = rotation.rotate(p)
+        let p2 = p1 + translation
+        var result = AABB(p, p2)
+        if !rotation.isIdentity {
+            let θ = rotation.radians
+            // p(t) = (sin((1-t)*θ)*p + sin(t*θ)*p1)/sin(θ) + t * translation
+            // p(t) = (sin(θ)*cos(t*θ)*p - cos(θ)*sin(t*θ)*p + sin(t*θ)*p1)/sin(θ) + t * translation
+            // For each axis s ∈ {.x, .y, .z} find tₛ which gives an extemum of p(t)ₛ
+            // p(tₛ) = (sin(θ)*cos(tₛ*θ)*pₛ - cos(θ)*sin(tₛ*θ)*pₛ + sin(tₛ*θ)*p1ₛ)/sin(θ) + t * translationₛ
+            // dp(tₛ)/dtₛ = (-sin(θ)*θ*sin(tₛ*θ)*pₛ - cos(θ)*θ*cos(tₛ*θ)*pₛ + θ*cos(tₛ*θ)*p1ₛ) / sin(θ) + translationₛ = 0
+            // -sin(θ)*θ*sin(tₛ*θ)*pₛ - cos(θ)*θ*cos(tₛ*θ)*pₛ + θ*cos(tₛ*θ)*p1ₛ = -translationₛ * sin(θ)
+            // (sin(θ)*θ*pₛ) * sin(tₛ*θ) + (cos(θ)*θ*pₛ - θ*p1ₛ) * cos(tₛ*θ) = translationₛ * sin(θ)
+            // A = sin(θ) * θ * pₛ
+            // B = θ * (cos(θ) * pₛ - p1ₛ)
+            // C = translationₛ * sin(θ)
+            // A * sin(tₛ*θ) + B * cos(tₛ*θ) = C
+            // A = Z * sin(φ), B = Z * cos(φ)
+            // cos(tₛ*θ - φ) = C / sqrt(A² + B²)
+            // tₛ*θ - φ = ± acos(C / sqrt(A² + B²)) + 2πn
+            // tₛ - φ = (atan2(B, A) ± acos(C / sqrt(A² + B²)) + 2πn)/θ
+            // Choose n such that 0 ≤ tₛ*θ ≤ π
+            let sinθ = sin(θ)
+            let cosθ = cos(θ)
+            func getP(_ t: Double) -> Point3D {
+                (sin((1 - t) * θ)/sinθ) * p + (sin(t * θ) / sinθ) * p1 + t * translation
+            }
+            for axis in Axis3D.allCases {
+                let A = θ * sinθ * p[axis]
+                let B = θ * (cosθ * p[axis] - p1[axis])
+                let C = translation[axis] * sinθ
+                let Z = C / sqrt(A * A + B * B)
+                if !Z.isFinite { continue }
+                if abs(Z) > 1 { continue }
+                let φ = atan2(A, B)
+                let acosZ = acos(Z)
+                let t1 = normalizeAngle(φ + acosZ) / θ
+                let t2 = normalizeAngle(φ - acosZ) / θ
+                if t1.isFinite && (0...1).contains(t1) {
+                    result.add(getP(t1))
+                }
+                if t2.isFinite && (0...1).contains(t2) {
+                    result.add(getP(t2))
+                }
+            }
+        }
+        return result
+
+
+    }
+}
+
+private func normalizeAngle(_ x: Double) -> Double {
+    var result = x
+    let tau: Double = 2 * .pi
+    if result < 0 {
+        result += tau
+    } else if result >= tau {
+        result -= tau
+    }
+    return result
 }
 
 /// Unit quaternion representing orientation
@@ -61,8 +123,12 @@ public struct Quaternion {
 
     public static var identity: Self { Quaternion(w: 1, v: .zero) }
 
+    public init(degrees: Double, axis: Vector3D, normalized: Bool) {
+        let radians = degrees / 180.0 * .pi
+        self.init(radians: radians, axis: axis, normalized: normalized)
+    }
+
     public init(radians: Double, axis: Vector3D, normalized: Bool) {
-        let n = normalized ? axis : axis.normalized()
         let cosA = cos(radians / 2)
         w = abs(cosA)
         var scale = sin(radians / 2) * (cosA < 0 ? -1 : +1)
@@ -78,6 +144,18 @@ public struct Quaternion {
 
     public var inverse: Quaternion {
         Quaternion(w: w, v: -v)
+    }
+
+    public var isIdentity: Bool {
+        return w == 1.0
+    }
+
+    public var radians: Double {
+        return 2*acos(w)
+    }
+
+    public var degrees: Double {
+        return radians * 180 / .pi
     }
 
     public func rotate(_ v: Vector3D) -> Vector3D {
@@ -96,7 +174,7 @@ public struct Quaternion {
     }
 
     public func pow(_ t: Double) -> Self {
-        let θ = acos(w)
+        let θ = acos(w) // θ/2 actually
         let sinθ = sqrt(1 - w * w)
         let w2 = cos(θ * t)
         let scale = sin(θ * t) / sinθ

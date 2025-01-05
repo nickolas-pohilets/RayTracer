@@ -95,6 +95,7 @@ private func getURL(_ path: String) -> URL {
 }
 
 func main() async throws {
+    testQuat()
     let world = try makeWorld1()
     let camera = makeCamera1()
     let t = Date()
@@ -105,3 +106,27 @@ func main() async throws {
 }
 
 try await main()
+
+
+func testQuat() {
+    do {
+        let t = Transform3D(rotation: .init(degrees: 120, axis: Vector3D(axis: .z), normalized: true))
+        let box = t.boundingBox(for: Point3D(x: 10, y: 0, z: 0))
+        print(box)
+    }
+    do {
+        let tr = Transform3D(
+            rotation: .init(degrees: 120, axis: Vector3D(axis: .z), normalized: true),
+            translation: Vector3D(x: -5, y: -5, z: 0)
+        )
+        let p = Point3D(x: 10, y: 0, z: 0)
+        let box = tr.boundingBox(for: p)
+        print(box)
+        for i in 0..<100 {
+            let t = Double(i) * 0.01
+            let tri = tr.pow(t)
+            let pi = tri.transform(p)
+            assert(box.contains(pi, threshold: 1e-6))
+        }
+    }
+}

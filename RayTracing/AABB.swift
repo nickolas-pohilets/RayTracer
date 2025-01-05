@@ -69,6 +69,12 @@ public struct AABB {
         return AABB(_min: _min + offset, _max: _max + offset)
     }
 
+    public func contains(_ point: Point3D, threshold: Double = 0.0) -> Bool {
+        _min.x - threshold <= point.x && point.x <= _max.x + threshold
+        && _min.y - threshold <= point.y && point.y <= _max.y + threshold
+        && _min.z - threshold <= point.z && point.z <= _max.z + threshold
+    }
+
     func hit(ray: Ray3D) -> ClosedRange<Double>? {
         var tEntry: Double = -Double.infinity
         var tExit: Double = +Double.infinity
