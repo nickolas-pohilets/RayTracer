@@ -50,8 +50,12 @@ struct CheckerTexture: Texture {
     }
 }
 
-struct ImageTexture: Texture {
-    var image: Image
+public struct ImageTexture: Texture {
+    public var image: Image
+
+    public init(image: Image) {
+        self.image = image
+    }
 
     public subscript(_ coordinates: Point2D, point point: Point3D) -> ColorF {
         let i: Double = (1.0 - min(1, max(coordinates.v, 0))) * Double(image.height) - 0.5

@@ -28,7 +28,8 @@ func makeWorld1() throws -> some Hittable {
                     let material = Lambertian(albedo: albedo)
 
                     let sphere = Sphere(center: center, radius: 0.2, material: material)
-                    let blur = MotionBlur(offset: Vector3D(x: 0, y: .random(in: 0...0.5, using: &rng), z: 0), base: sphere)
+                    let offset = Vector3D(x: 0, y: .random(in: 0...0.5, using: &rng), z: 0)
+                    let blur = MotionBlur(transform: .init(translation: offset), base: sphere)
                     w.append(blur)
                 } else if (chooseMat < 0.95) {
                     // metal
@@ -48,8 +49,18 @@ func makeWorld1() throws -> some Hittable {
     let material1 = Dielectric(refractionIndex: 1.5)
     w.append(Sphere(center: Point3D(x: 0, y: 1, z: 0), radius: 1.0, material: material1))
 
-    let material2 = Lambertian(albedo: ColorF(x: 0.4, y: 0.2, z: 0.1))
-    w.append(Sphere(center: Point3D(x: -4, y: 1, z: 0), radius: 1.0, material: material2))
+    do {
+        let image = try Image.load(url: getURL("textures/earthmap.jpg"))
+        let material2 = Lambertian(texture: ImageTexture(image: image))
+        let sphere = Sphere(center: .zero, radius: 1.0, material: material2)
+        let t1 = Transformed(
+            transform: .rotation(degrees: 23, axis: .z) * .rotation(degrees: 190, axis: .y),
+            base: sphere
+        )
+        let t2 = MotionBlur(transform: .rotation(degrees: 30, axis: .y), base: t1)
+        let t3 = Transformed(transform: .translation(x: -4, y: 1, z: 0), base: t2)
+        w.append(t3)
+    }
 
     let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
     w.append(Sphere(center: Point3D(x: 4, y: 1, z: 0), radius: 1.0, material: material3))
@@ -63,7 +74,7 @@ func makeCamera1() -> Camera {
         imageWidth: imageWidth,
         imageHeight: imageWidth * 9 / 16,
         verticalFOV: 20,
-        lookFrom: Point3D(x: 13, y: 2, z: 3),
+        lookFrom: Point3D(x: -10, y: 2, z: 8),
         lookAt: Point3D(x: 0, y: 0, z: 0),
         defocusAngle: 0.6,
         focusDistance: 10
@@ -102,7 +113,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/dropping-balls-new.ppm"))
+    try image.writePPM(to: getURL("results/dropping-balls-rotation-blur.ppm"))
 }
 
 try await main()

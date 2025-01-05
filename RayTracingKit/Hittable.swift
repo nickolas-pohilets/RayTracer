@@ -64,6 +64,10 @@ public struct HitRecord {
         result.face = face.inverted
         return result
     }
+
+    mutating func apply(transform: Transform3D) {
+        point = transform.transform(point)
+    }
 }
 
 public struct HitRange {
@@ -78,6 +82,11 @@ public struct HitRange {
             self.entry = b
             self.exit = a
         }
+    }
+
+    mutating func apply(transform: Transform3D) {
+        entry.apply(transform: transform)
+        exit.apply(transform: transform)
     }
 }
 
@@ -460,51 +469,102 @@ public struct Composition: HittableVolume {
 }
 
 public struct MotionBlur<Base: HittableVolume>: HittableVolume {
-    var offset: Vector3D
+    var transform: Transform3D
     var base: Base
 
-    public init(offset: Vector3D, base: Base) {
-        self.offset = offset
+    public init(transform: Transform3D, base: Base) {
+        self.transform = transform
         self.base = base
     }
 
     public var center: Point3D {
-        return base.center + offset * 0.5
+        return boundingBox.center
     }
 
     public var boundingBox: AABB {
-        let box1 = base.boundingBox
-        let box2 = box1.translate(by: offset)
-        return AABB(box1, box2)
+        var result = AABB()
+        let box = base.boundingBox
+        if transform.rotation.isIdentity {
+            result.add(box)
+            result.add(box.translate(by: transform.translation))
+        } else {
+            box.enumerateCorners { p in
+                let box = transform.boundingBox(for: p)
+                result.add(box)
+            }
+        }
+        return result
     }
 
     public func hits(ray: Ray3D, time: Double) -> [HitRange] {
-        let offset = self.offset * time
-        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
-        var hits = base.hits(ray: offsetRay, time: time)
-        for i in hits.indices {
-            hits[i].entry.point += offset
-            hits[i].exit.point += offset
-        }
-        return hits
+        return transformed(time: time).hits(ray: ray, time: time)
     }
 
     public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
-        let offset = self.offset * time
-        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
-        guard var h = base.hit(ray: offsetRay, time: time, range: range) else { return nil }
-        h.point += offset
-        return h
+        return transformed(time: time).hit(ray: ray, time: time, range: range)
+    }
+
+    public func transformed(time: Double) -> Transformed<Base> {
+        let tr = transform.pow(time)
+        return Transformed(transform: tr, base: base)
     }
 }
 
 extension MotionBlur: HittableConvexVolume where Base: HittableConvexVolume {
     public func hit(ray: Ray3D, time: Double) -> HitRange? {
-        let offset = self.offset * time
-        let offsetRay = Ray3D(origin: ray.origin - offset, direction: ray.direction)
+        return transformed(time: time).hit(ray: ray, time: time)
+    }
+}
+
+public struct Transformed<Base: HittableVolume>: HittableVolume {
+    var transform: Transform3D
+    var base: Base
+
+    public init(transform: Transform3D, base: Base) {
+        self.transform = transform
+        self.base = base
+    }
+
+    public var center: Point3D {
+        return boundingBox.center
+    }
+
+    public var boundingBox: AABB {
+        let box = base.boundingBox
+        if transform.rotation.isIdentity {
+            return box.translate(by: transform.translation)
+        } else {
+            var result = AABB()
+            box.enumerateCorners { p in
+                let box = transform.transform(p)
+                result.add(box)
+            }
+            return result
+        }
+    }
+
+    public func hits(ray: Ray3D, time: Double) -> [HitRange] {
+        let offsetRay = transform.inverse.transform(ray)
+        var hits = base.hits(ray: offsetRay, time: time)
+        for i in hits.indices {
+            hits[i].apply(transform: transform)
+        }
+        return hits
+    }
+
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        let offsetRay = transform.inverse.transform(ray)
+        guard var h = base.hit(ray: offsetRay, time: time, range: range) else { return nil }
+        h.apply(transform: transform)
+        return h
+    }
+}
+
+extension Transformed: HittableConvexVolume where Base: HittableConvexVolume {
+    public func hit(ray: Ray3D, time: Double) -> HitRange? {
+        let offsetRay = transform.inverse.transform(ray)
         guard var h = base.hit(ray: offsetRay, time: time) else { return nil }
-        h.entry.point += offset
-        h.exit.point += offset
+        h.apply(transform: transform)
         return h
     }
 }

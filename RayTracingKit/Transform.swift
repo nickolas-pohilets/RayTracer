@@ -17,6 +17,30 @@ public struct Transform3D {
         self.translation = translation
     }
 
+    public static func rotation(degrees: Double, axis: Axis3D) -> Self {
+        Transform3D(rotation: .init(degrees: degrees, axis: axis))
+    }
+
+    public static func rotation(radians: Double, axis: Axis3D) -> Self {
+        Transform3D(rotation: .init(radians: radians, axis: axis))
+    }
+
+    public static func rotation(degrees: Double, axis: Vector3D, normalized: Bool) -> Self {
+        Transform3D(rotation: .init(degrees: degrees, axis: axis, normalized: normalized))
+    }
+
+    public static func rotation(radians: Double, axis: Vector3D, normalized: Bool) -> Self {
+        Transform3D(rotation: .init(radians: radians, axis: axis, normalized: normalized))
+    }
+
+    public static func translation(x: Double, y: Double, z: Double) -> Self {
+        Transform3D(translation: Vector3D(x: x, y: y, z: z))
+    }
+
+    public static func translation(_ v: Vector3D) -> Self {
+        Transform3D(translation: v)
+    }
+
     public static func *(_ lhs: Self, _ rhs: Self) -> Self {
         Transform3D(
             rotation: lhs.rotation * rhs.rotation,
@@ -30,6 +54,12 @@ public struct Transform3D {
 
     public func transform(_ p: Point3D) -> Point3D {
         return rotation.rotate(p) + translation
+    }
+
+    public func transform(_ ray: Ray3D) -> Ray3D {
+        let d = rotation.rotate(ray.direction)
+        let o = transform(ray.origin)
+        return Ray3D(origin: o, direction: d)
     }
 
     public func pow(_ t: Double) -> Self {
@@ -123,6 +153,14 @@ public struct Quaternion {
 
     public static var identity: Self { Quaternion(w: 1, v: .zero) }
 
+    public init(degrees: Double, axis: Axis3D) {
+        self.init(degrees: degrees, axis: Vector3D(axis: axis), normalized: true)
+    }
+
+    public init(radians: Double, axis: Axis3D) {
+        self.init(radians: radians, axis: Vector3D(axis: axis), normalized: true)
+    }
+
     public init(degrees: Double, axis: Vector3D, normalized: Bool) {
         let radians = degrees / 180.0 * .pi
         self.init(radians: radians, axis: axis, normalized: normalized)
@@ -174,6 +212,7 @@ public struct Quaternion {
     }
 
     public func pow(_ t: Double) -> Self {
+        if self.isIdentity { return self }
         let θ = acos(w) // θ/2 actually
         let sinθ = sqrt(1 - w * w)
         let w2 = cos(θ * t)

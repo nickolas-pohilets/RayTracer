@@ -118,7 +118,7 @@ public struct Image {
 }
 
 extension Image {
-    static func load(url: URL) throws -> Image {
+    public static func load(url: URL) throws -> Image {
         let cgImage = try CGImage.load(url: url)
         var image = Image(width: cgImage.width, height: cgImage.height)
         image.withContext { cgContext in

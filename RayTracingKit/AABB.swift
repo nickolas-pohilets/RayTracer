@@ -91,4 +91,13 @@ public struct AABB {
         if tEntry >= tExit { return nil }
         return tEntry...tExit
     }
+
+    public func enumerateCorners(_ block: (Vector3D) -> Void) {
+        for i in 0..<8 {
+            let x = (i & 1) != 0 ? _max.x : _min.x
+            let y = (i & 2) != 0 ? _max.y : _min.z
+            let z = (i & 4) != 0 ? _max.z : _min.z
+            block(Vector3D(x: x, y: y, z: z))
+        }
+    }
 }
