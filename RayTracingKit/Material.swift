@@ -6,7 +6,12 @@
 //
 
 public protocol Material {
+    func emitted(textureCoordinates: Point2D, point: Point3D) -> ColorF
     func scatter(ray: Ray3D, hit: HitRecord, using rng: inout some RandomNumberGenerator) -> (attenuation: ColorF, scattered: Ray3D)?
+}
+
+extension Material {
+    public func emitted(textureCoordinates: Point2D, point: Point3D) -> ColorF { .zero }
 }
 
 public struct Lambertian: Material {
@@ -64,5 +69,25 @@ public struct Dielectric: Material {
         let ηRatio = hit.face == .front ? 1.0 / refractionIndex : refractionIndex
         let refracted = ray.direction.normalized().refractedOrReflected(normal: hit.normal, ηRatio: ηRatio, reflectanceRandom: .random(in: 0..<1, using: &rng))
         return .some((attenuation: ColorF(x: 1.0, y: 1.0, z: 1.0), scattered: Ray3D(origin: hit.point, direction: refracted)))
+    }
+}
+
+public struct Emissive: Material {
+    public var texture: any Texture
+
+    public init(albedo: ColorF) {
+        self.texture = SolidColor(albedo: albedo)
+    }
+
+    public init(texture: any Texture) {
+        self.texture = texture
+    }
+
+    public func emitted(textureCoordinates: Point2D, point: Point3D) -> ColorF {
+        return texture[textureCoordinates, point: point]
+    }
+
+    public func scatter(ray: Ray3D, hit: HitRecord, using rng: inout some RandomNumberGenerator) -> (attenuation: ColorF, scattered: Ray3D)? {
+        return nil
     }
 }

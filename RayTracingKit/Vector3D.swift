@@ -183,7 +183,11 @@ extension ColorF {
     }
 
     func linearToGamma() -> Self {
-        .init(x: x.squareRoot(), y: y.squareRoot(), z: z.squareRoot())
+        .init(
+            x: min(x.squareRoot(), 1),
+            y: min(y.squareRoot(), 1),
+            z: min(z.squareRoot(), 1)
+        )
     }
 
     public static func random(in range: ClosedRange<Double> = 0...1, using rng: inout some RandomNumberGenerator) -> ColorF {

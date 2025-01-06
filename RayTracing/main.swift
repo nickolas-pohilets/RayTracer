@@ -35,6 +35,16 @@ func makeWorld1() throws -> some Hittable {
         w.append(t2)
     }
 
+    do {
+        let quad = Quad(
+            origin: Point3D(x: -5, y: 10, z: 5),
+            u: Vector3D(x: 10, y: 0, z: 0),
+            v: Vector3D(x: 0, y: 0, z: -10),
+            material: Emissive(albedo: ColorF(x: 4.0, y: 4.0, z: 4.0))
+        )
+        w.append(quad)
+    }
+
     let material3 = Metal(albedo: ColorF(x: 0.7, y: 0.6, z: 0.5), fuzz: 0.0)
     w.append(Sphere(center: Point3D(x: 4, y: 1, z: 0), radius: 1.0, material: material3))
 
@@ -125,7 +135,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/lens.ppm"))
+    try image.writePPM(to: getURL("results/light.ppm"))
 }
 
 try await main()

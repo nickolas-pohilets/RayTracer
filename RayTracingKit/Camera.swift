@@ -115,14 +115,18 @@ public struct Camera {
             return .zero
         }
         if let hit = world.hit(ray: ray, time: time, range: 0.001..<Double.infinity) {
+            let emittedColor = hit.material.emitted(textureCoordinates: hit.textureCoordinates, point: hit.point)
             if let (attenuation, scatered) = hit.material.scatter(ray: ray, hit: hit, using: &rng) {
                 attenuation.validate()
-                return attenuation * rayColor(scatered, time: time, world: world, depth: depth - 1, using: &rng)
+                let scatteredColor = attenuation * rayColor(scatered, time: time, world: world, depth: depth - 1, using: &rng)
+                return emittedColor + scatteredColor
+            } else {
+                return emittedColor
             }
-            return .zero
         }
 
-        let a = 0.5 * (ray.direction.y + 1.0)
-        return (1 - a) * ColorF(x: 1, y: 1, z: 1) + a * ColorF(x: 0.5, y: 0.7, z: 1.0)
+        return .zero
+//        let a = 0.5 * (ray.direction.y + 1.0)
+//        return (1 - a) * ColorF(x: 1, y: 1, z: 1) + a * ColorF(x: 0.5, y: 0.7, z: 1.0)
     }
 }
