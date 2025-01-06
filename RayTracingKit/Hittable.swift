@@ -67,6 +67,7 @@ public struct HitRecord {
 
     mutating func apply(transform: Transform3D) {
         point = transform.transform(point)
+        normal = transform.rotation.rotate(normal)
     }
 }
 

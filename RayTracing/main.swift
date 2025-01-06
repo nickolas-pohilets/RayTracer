@@ -42,7 +42,13 @@ func makeWorld1() throws -> some Hittable {
         w.append(t1)
         let t2 = Transformed(transform: .translation(x: -1.2, y: 0, z: 2.7) * .rotation(degrees: 115, axis: .y), base: c)
         w.append(t2)
-        let t3 = Transformed(transform: .translation(x: -1.7, y: 0.5, z: 3.5) * .rotation(degrees: -30, axis: .y) * .rotation(degrees: -90, axis: .z), base: c)
+        let t3 = Transformed(
+            transform: .translation(x: -1.7, y: 0.5, z: 3.5)
+                        * .rotation(degrees: -30, axis: .y)
+                        * .rotation(degrees: -90, axis: .z)
+                        * .rotation(degrees: 90, axis: .y),
+            base: c
+        )
         w.append(t3)
     }
 
