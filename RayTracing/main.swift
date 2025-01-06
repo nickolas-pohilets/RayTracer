@@ -14,8 +14,14 @@ func makeWorld1() throws -> some Hittable {
     let ground = Lambertian(albedo: ColorF(x: 0.5, y: 0.5, z: 0.5))
     w.append(Sphere(center: Point3D(x: 0, y: -1000, z: 0), radius: 1000, material: ground))
 
-    let material1 = Dielectric(refractionIndex: 1.5)
-    w.append(Sphere(center: Point3D(x: 0, y: 1, z: 0), radius: 1.0, material: material1))
+    do {
+        let material1 = Dielectric(refractionIndex: 1.5)
+        let s1 = Sphere(center: Point3D(x: 0, y: 1, z: -9.915), radius: 10.0, material: material1)
+        let s2 = Sphere(center: Point3D(x: 0, y: 1, z: +9.915), radius: 10.0, material: material1)
+        let lens = Composition(operation: .intersection, items: [s1, s2])
+        let tr = Transformed(transform: .translation(x: -0.5, y: 0, z: 0) * .rotation(degrees: -45, axis: .y), base: lens)
+        w.append(tr)
+    }
 
     do {
         let image = try Image.load(url: getURL("textures/earthmap.jpg"))
@@ -50,6 +56,25 @@ func makeWorld1() throws -> some Hittable {
             base: c
         )
         w.append(t3)
+    }
+
+    do {
+        let quad = Quad(
+            origin: Point3D(x: -1, y: 0, z: -2),
+            u: Vector3D(x: 0, y: 0.8, z: 0),
+            v: Vector3D(x: 5.5, y: 0, z: 0),
+            material: Lambertian(albedo: ColorF(x: 0.7, y: 0.8, z: 0))
+        )
+        w.append(quad)
+    }
+    do {
+        let quad = Quad(
+            origin: Point3D(x: -1, y: 0, z: -2),
+            u: Vector3D(x: 0, y: 0, z: 0.8),
+            v: Vector3D(x: 5.5, y: 0, z: 0),
+            material: Lambertian(albedo: ColorF(x: 0.0, y: 1.0, z: 0.8))
+        )
+        w.append(quad)
     }
 
     return BoundingVolumeNode(items: w)
@@ -100,7 +125,7 @@ func main() async throws {
     let image = await camera.render(world: world, config: .init(samplesPerPixel: 100, maxDepth: 50))
     let duration = Date().timeIntervalSince(t)
     print("Done in \(duration)s")
-    try image.writePPM(to: getURL("results/barrel.ppm"))
+    try image.writePPM(to: getURL("results/lens.ppm"))
 }
 
 try await main()

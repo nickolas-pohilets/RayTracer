@@ -310,6 +310,51 @@ public struct Cylinder: HittableConvexVolume {
     }
 }
 
+public struct Quad: Hittable {
+    public let origin: Point3D
+    public let u: Vector3D
+    public let v: Vector3D
+    public let w: Vector3D
+    public let plane: Plane
+    public let boundingBox: AABB
+    public let material: any Material
+
+    public init(origin: Point3D, u: Vector3D, v: Vector3D, material: any Material) {
+        self.origin = origin
+        self.u = u
+        self.v = v
+
+        let n = u ⨯ v
+        let lenSq = n.lengthSquared
+        self.w = n / lenSq
+        let normal = n / lenSq.squareRoot()
+        self.plane = Plane(normal: normal, point: origin)
+
+        self.boundingBox = AABB(origin, origin + u, origin + v, origin + u + v)
+
+        self.material = material
+    }
+
+    public var center: Point3D {
+        boundingBox.center
+    }
+
+    public func hit(ray: Ray3D, time: Double, range: Range<Double>) -> HitRecord? {
+        let t = plane.hit(ray: ray)
+        if !t.isFinite { return nil }
+        if !range.contains(t) { return nil }
+        let point = ray[t]
+        let p = point - origin
+        // p = α * u + β * v
+        // w • (p ⨯ v) = w • (α * (u ⨯ v) + β * (v ⨯ v)) = α * (n / |n|²) • n = α
+        // w • (u ⨯ p) = w • (α * (u ⨯ u) + β * (u ⨯ v)) = β * (n / |n|²) • n = β
+        let α = w • (p ⨯ v)
+        let β = w • (u ⨯ p)
+        if !(0...1).contains(α) || !(0...1).contains(β) { return nil }
+        return HitRecord(t: t, point: point, normal: plane.normal, rayDirection: ray.direction, material: material, textureCoordinates: Point2D(u: α, v: β))
+    }
+}
+
 public struct Plane {
     var normal: Vector3D
     var d: Double
@@ -326,6 +371,12 @@ public struct Plane {
 
     func distance(to point: Point3D) -> Double {
         return normal • point + d
+    }
+
+    public func hit(ray: Ray3D) -> Double {
+        let denom = normal • ray.direction
+        let t = -(d + normal • ray.origin) / denom
+        return t
     }
 }
 
@@ -370,7 +421,7 @@ public struct Composition: HittableVolume {
             case .union:
                 ranges = Self.makeUnion(lhs: ranges, rhs: next)
             case .intersection:
-                ranges = Self.makeUnion(lhs: ranges, rhs: next)
+                ranges = Self.makeIntersection(lhs: ranges, rhs: next)
             case .subtract:
                 ranges = Self.makeDifference(lhs: ranges, rhs: next)
             }
