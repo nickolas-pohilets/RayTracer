@@ -66,6 +66,19 @@ public struct Transform3D: Equatable {
         return Ray3D(origin: o, direction: d)
     }
 
+    public func transform(_ box: AABB) -> AABB {
+        if rotation.isIdentity {
+            return box.translate(by: translation)
+        } else {
+            var result = AABB()
+            box.enumerateCorners { p in
+                let box = transform(p)
+                result.add(box)
+            }
+            return result
+        }
+    }
+
     public func pow(_ t: Double) -> Self {
         return Transform3D(rotation: rotation.pow(t), translation: t * translation)
     }
@@ -77,7 +90,7 @@ public struct Transform3D: Equatable {
         )
     }
 
-    public func boundingBox(for p: Point3D) -> AABB {
+    public func boundingBoxForAnimation(_ p: Point3D) -> AABB {
         let p1 = rotation.rotate(p)
         let p2 = p1 + translation
         var result = AABB(p, p2)
@@ -124,8 +137,20 @@ public struct Transform3D: Equatable {
             }
         }
         return result
+    }
 
-
+    public func boundingBoxForAnimation(_ box: AABB) -> AABB {
+        var result = AABB()
+        if rotation.isIdentity {
+            result.add(box)
+            result.add(box.translate(by: translation))
+        } else {
+            box.enumerateCorners { p in
+                let box = boundingBoxForAnimation(p)
+                result.add(box)
+            }
+        }
+        return result
     }
 }
 

@@ -29,10 +29,10 @@ struct TransformTests {
             #expect((p - pRec).lengthSquared < eps * eps)
         }
     }
-    @Test func testAABB() {
+    @Test func testBoundingBoxForAnimation() {
         do {
             let tr = Transform3D(rotation: .init(degrees: 120, axis: Vector3D(axis: .z), normalized: true))
-            let box = tr.boundingBox(for: Point3D(x: 10, y: 0, z: 0))
+            let box = tr.boundingBoxForAnimation(Point3D(x: 10, y: 0, z: 0))
             #expect((box.size - Vector3D(x: 15, y: 10, z: 0)).lengthSquared < eps * eps)
         }
         do {
@@ -41,7 +41,7 @@ struct TransformTests {
                 translation: Vector3D(x: -5, y: -5, z: 0)
             )
             let p = Point3D(x: 10, y: 0, z: 0)
-            let box = tr.boundingBox(for: p)
+            let box = tr.boundingBoxForAnimation(p)
             for i in 0..<100 {
                 let t = Double(i) * 0.01
                 let tri = tr.pow(t)

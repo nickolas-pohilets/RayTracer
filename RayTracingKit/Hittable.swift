@@ -37,6 +37,8 @@ public struct HitRecord {
     var textureCoordinates: Point2D
 
     public init(t: Double, point: Point3D, normal: Vector3D, face: Face, material: any Material, textureCoordinates: Point2D) {
+        assert((0...1).contains(textureCoordinates.u))
+        assert((0...1).contains(textureCoordinates.v))
         self.t = t
         self.point = point
         self.normal = normal
@@ -228,9 +230,6 @@ public struct Cylinder: HittableConvexVolume {
 
         let ob = ray.origin - .zero
         let ot = ray.origin - Vector3D(x: 0, y: height, z: 0)
-
-        let textureWidth = radius * 2 * .pi
-        let textureHeight = height + 2 * radius
 
         var hitRanges: [HitRange] = []
         do {
@@ -476,31 +475,18 @@ public struct Composition: HittableVolume {
 }
 
 public struct MotionBlur<Base: HittableVolume>: HittableVolume {
-    var transform: Transform3D
-    var base: Base
+    public let transform: Transform3D
+    public let base: Base
+    public let boundingBox: AABB
 
     public init(transform: Transform3D, base: Base) {
         self.transform = transform
         self.base = base
+        self.boundingBox = transform.boundingBoxForAnimation(base.boundingBox)
     }
 
     public var center: Point3D {
         return boundingBox.center
-    }
-
-    public var boundingBox: AABB {
-        var result = AABB()
-        let box = base.boundingBox
-        if transform.rotation.isIdentity {
-            result.add(box)
-            result.add(box.translate(by: transform.translation))
-        } else {
-            box.enumerateCorners { p in
-                let box = transform.boundingBox(for: p)
-                result.add(box)
-            }
-        }
-        return result
     }
 
     public func hits(ray: Ray3D, time: Double) -> [HitRange] {
@@ -513,7 +499,7 @@ public struct MotionBlur<Base: HittableVolume>: HittableVolume {
 
     public func transformed(time: Double) -> Transformed<Base> {
         let tr = transform.pow(time)
-        return Transformed(transform: tr, base: base)
+        return Transformed(transform: tr, base: base, boundingBox: self.boundingBox)
     }
 }
 
@@ -524,30 +510,18 @@ extension MotionBlur: HittableConvexVolume where Base: HittableConvexVolume {
 }
 
 public struct Transformed<Base: HittableVolume>: HittableVolume {
-    var transform: Transform3D
-    var base: Base
+    public let transform: Transform3D
+    public let base: Base
+    public let boundingBox: AABB
 
-    public init(transform: Transform3D, base: Base) {
+    public init(transform: Transform3D, base: Base, boundingBox: AABB? = nil) {
         self.transform = transform
         self.base = base
+        self.boundingBox = boundingBox ?? transform.transform(base.boundingBox)
     }
 
     public var center: Point3D {
         return boundingBox.center
-    }
-
-    public var boundingBox: AABB {
-        let box = base.boundingBox
-        if transform.rotation.isIdentity {
-            return box.translate(by: transform.translation)
-        } else {
-            var result = AABB()
-            box.enumerateCorners { p in
-                let box = transform.transform(p)
-                result.add(box)
-            }
-            return result
-        }
     }
 
     public func hits(ray: Ray3D, time: Double) -> [HitRange] {
