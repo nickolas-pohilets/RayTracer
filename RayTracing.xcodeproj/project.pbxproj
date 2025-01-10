@@ -47,6 +47,7 @@
 		4A1A07862D1C682D00FD2AC2 /* Calculator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Calculator; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RayTracingKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayTracingKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AF18FF42D30414E002C48FA /* MetalRayTracer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalRayTracer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,6 +84,11 @@
 			path = RayTracingKitTests;
 			sourceTree = "<group>";
 		};
+		4AF18FF52D30414E002C48FA /* MetalRayTracer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MetalRayTracer;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +122,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4AF18FF12D30414E002C48FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -126,6 +139,7 @@
 				4A1A07872D1C682D00FD2AC2 /* Calculator */,
 				4A1A084D2D2AFD9500FD2AC2 /* RayTracingKit */,
 				4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */,
+				4AF18FF52D30414E002C48FA /* MetalRayTracer */,
 				4A1A08622D2AFD9E00FD2AC2 /* Frameworks */,
 				4A1A072C2D1B501A00FD2AC2 /* Products */,
 			);
@@ -138,6 +152,7 @@
 				4A1A07862D1C682D00FD2AC2 /* Calculator */,
 				4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */,
 				4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */,
+				4AF18FF42D30414E002C48FA /* MetalRayTracer.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -252,6 +267,28 @@
 			productReference = 4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		4AF18FF32D30414E002C48FA /* MetalRayTracer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4AF190022D30414F002C48FA /* Build configuration list for PBXNativeTarget "MetalRayTracer" */;
+			buildPhases = (
+				4AF18FF02D30414E002C48FA /* Sources */,
+				4AF18FF12D30414E002C48FA /* Frameworks */,
+				4AF18FF22D30414E002C48FA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4AF18FF52D30414E002C48FA /* MetalRayTracer */,
+			);
+			name = MetalRayTracer;
+			packageProductDependencies = (
+			);
+			productName = MetalRayTracer;
+			productReference = 4AF18FF42D30414E002C48FA /* MetalRayTracer.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -274,6 +311,9 @@
 					4A1A08522D2AFD9500FD2AC2 = {
 						CreatedOnToolsVersion = 16.1;
 					};
+					4AF18FF32D30414E002C48FA = {
+						CreatedOnToolsVersion = 16.1;
+					};
 				};
 			};
 			buildConfigurationList = 4A1A07262D1B501A00FD2AC2 /* Build configuration list for PBXProject "RayTracing" */;
@@ -294,6 +334,7 @@
 				4A1A07852D1C682D00FD2AC2 /* Calculator */,
 				4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */,
 				4A1A08522D2AFD9500FD2AC2 /* RayTracingKitTests */,
+				4AF18FF32D30414E002C48FA /* MetalRayTracer */,
 			);
 		};
 /* End PBXProject section */
@@ -307,6 +348,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4A1A08512D2AFD9500FD2AC2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4AF18FF22D30414E002C48FA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -338,6 +386,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4A1A084F2D2AFD9500FD2AC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4AF18FF02D30414E002C48FA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -618,6 +673,60 @@
 			};
 			name = Release;
 		};
+		4AF190002D30414F002C48FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MetalRayTracer/MetalRayTracer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MetalRayTracer/Preview Content\"";
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MetalRayTracer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4AF190012D30414F002C48FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MetalRayTracer/MetalRayTracer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MetalRayTracer/Preview Content\"";
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MetalRayTracer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -662,6 +771,15 @@
 			buildConfigurations = (
 				4A1A085D2D2AFD9500FD2AC2 /* Debug */,
 				4A1A085E2D2AFD9500FD2AC2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4AF190022D30414F002C48FA /* Build configuration list for PBXNativeTarget "MetalRayTracer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4AF190002D30414F002C48FA /* Debug */,
+				4AF190012D30414F002C48FA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
