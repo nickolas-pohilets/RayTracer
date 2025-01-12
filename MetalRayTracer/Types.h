@@ -7,6 +7,20 @@
 
 #include <simd/simd.h>
 
+struct CameraConfig {
+    float vertical_POV;
+    vector_float3 look_from;
+    vector_float3 look_at;
+    vector_float3 up;
+    float defocus_angle;
+    float focus_distance;
+} __attribute__((swift_name("__CameraConfig")));
+
+struct RenderConfig {
+    unsigned int samples_per_pixel;
+    unsigned int max_depth;
+} __attribute__((swift_name("__RenderConfig")));
+
 struct Sphere {
     vector_float3 center;
     float radius;

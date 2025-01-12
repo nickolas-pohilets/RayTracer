@@ -9,9 +9,9 @@ import SwiftUI
 
 @main
 struct MetalRayTracerApp: App {
-    var body: some Scene {
+    var body: some SwiftUI.Scene {
         WindowGroup {
-            ContentView()
+            ContentView(scene: .simpleBalls)
         }
     }
 }

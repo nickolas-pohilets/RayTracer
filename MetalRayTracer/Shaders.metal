@@ -11,16 +11,60 @@
 using namespace metal;
 using namespace metal::raytracing;
 
-#if defined(assert)
-#undef assert
-#endif
 
-void assert(bool ok) {
-    if (!ok) {
-        device float* f = nullptr;
-        *f = 12;
+// See https://www.pcg-random.org/
+class pcg32 {
+    // RNG state.  All values are possible.
+    uint64_t state;
+    // Controls which RNG sequence (stream) is selected. Must *always* be odd.
+    uint64_t inc;
+public:
+    pcg32(uint64_t initstate, uint64_t initseq)
+    {
+        state = 0U;
+        inc = (initseq << 1u) | 1u;
+        random_u32();
+        state += initstate;
+        random_u32();
     }
-}
+
+    uint32_t random_u32() {
+        uint64_t oldstate = state;
+        state = oldstate * 6364136223846793005ULL + inc;
+        uint32_t xorshifted = ((oldstate >> 18u) ^ oldstate) >> 27u;
+        uint32_t rot = oldstate >> 59u;
+        return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+    }
+
+    float random_f() {
+        return ldexp(float(random_u32()), -32);
+    }
+
+    float2 random_unit_vector_2d() {
+        while (true) {
+            float x = random_f() * 2 - 1;
+            float y = random_f() * 2 - 1;
+            float lenSq = x * x + y * y;
+            if (1e-24 < lenSq && lenSq <= 1.0) {
+                return float2(x, y) / sqrt(lenSq);
+            }
+        }
+    }
+
+    float3 random_unit_vector_3d() {
+        while (true) {
+            float x = random_f() * 2 - 1;
+            float y = random_f() * 2 - 1;
+            float z = random_f() * 2 - 1;
+            float lenSq = x * x + y * y;
+            if (1e-24 < lenSq && lenSq <= 1.0) {
+                return float3(x, y, z) / sqrt(lenSq);
+            }
+        }
+    }
+};
+
+typedef pcg32 RNG;
 
 class HitRecord {
     float t;
@@ -96,8 +140,80 @@ struct BoundingBoxResult {
     float distance [[distance]];
 };
 
+enum class face {
+    front,
+    back
+};
+
 struct Payload {
+    float3 point;
     float3 normal;
+    face face;
+
+    void set_normal(float3 front_normal, float3 ray_direction) ray_data {
+        if (dot(front_normal, ray_direction) > 0) {
+            normal = -front_normal;
+            face = face::back;
+        } else {
+            normal = front_normal;
+            face = face::front;
+        }
+    }
+};
+
+class Camera {
+    float2 image_size;
+    float3 camera_center;
+    float3 viewport_u;
+    float3 viewport_v;
+    float3 viewport_center;
+
+    float3 defocus_u;
+    float3 defocus_v;
+public:
+    Camera(uint image_width, uint image_height, CameraConfig config) {
+        image_size = float2(image_width, image_height);
+        float half_pov_radians = config.vertical_POV * M_PI_F / 360;
+        float viewport_height = 2 * tan(half_pov_radians) * config.focus_distance;
+        float viewport_width = viewport_height * float(image_width) / float(image_height);
+        camera_center = config.look_from;
+
+        float3 w = normalize(config.look_from - config.look_at);
+        float3 u = normalize(cross(config.up, w));
+        float3 v = cross(w, u);
+
+        viewport_u = viewport_width * u;
+        viewport_v = -viewport_height * v;
+        viewport_center = config.look_from - config.focus_distance * w;
+
+        float defocus_radius = config.focus_distance * tan(config.defocus_angle * M_PI_F / 360);
+        defocus_u = u * defocus_radius;
+        defocus_v = v * defocus_radius;
+    }
+
+    ray get_ray(uint2 grid_index, thread RNG* rng) const {
+        float3 origin = get_ray_origin(rng);
+        float3 pixel_sample = get_pixel_sample(grid_index, rng);
+        return ray(origin, normalize(pixel_sample - origin));
+    }
+
+    float3 get_pixel_sample(uint2 grid_index, thread RNG* rng) const {
+        float offset_x = rng->random_f();
+        float offset_y = rng->random_f();
+        float sx = ((float(grid_index[0]) + offset_x) / image_size.x - 0.5);
+        float sy = ((float(grid_index[1]) + offset_y) / image_size.y - 0.5);
+        return viewport_center + sx * viewport_u + sy * viewport_v;
+    }
+
+    float3 get_ray_origin(thread RNG* rng) const {
+        float2 p = rng->random_unit_vector_2d();
+        return camera_center + p.x * defocus_u + p.y * defocus_v;
+    }
+};
+
+struct world {
+    primitive_acceleration_structure acceleration_structure;
+    intersection_function_table<triangle_data> function_table;
 };
 
 float4 background_color(float3 direction) {
@@ -105,37 +221,40 @@ float4 background_color(float3 direction) {
     return (1.0-a) * float4(1.0, 1.0, 1.0, 1.0) + a * float4(0.5, 0.7, 1.0, 1.0);
 }
 
-kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[texture(0)]],
-                               uint2 grid_index [[thread_position_in_grid]],
-                               primitive_acceleration_structure accelerationStructure [[buffer(1)]],
-                               intersection_function_table<triangle_data> functionTable [[buffer(2)]])
-{
-    int w = color_buffer.get_width();
-    int h = color_buffer.get_height();
-    float3 direction = float3(
-                              (float(grid_index[0]) - w * 0.5) / w,
-                              -(float(grid_index[1]) - h * 0.5) / w,
-                              -1.0);
-    float3 origin = float3(0, 0, 0);
-    ray ray(origin, direction);
-
+float4 get_ray_color(ray r, world w, thread RNG *rng) {
     intersector<triangle_data> intersector;
     Payload payload;
-    intersection_result<triangle_data> intersection = intersector.intersect(ray, accelerationStructure, functionTable, payload);
+    intersection_result<triangle_data> intersection = intersector.intersect(r, w.acceleration_structure, w.function_table, payload);
 
-    float4 color;
     switch (intersection.type) {
         case intersection_type::none:
-            color = background_color(direction);
-            break;
+            return background_color(r.direction);
         case intersection_type::bounding_box:
-            color = 0.5*float4(payload.normal.x+1, payload.normal.y+1, payload.normal.z+1, 1.0);
-            break;
+            return 0.5*float4(payload.normal.x+1, payload.normal.y+1, payload.normal.z+1, 1.0);
         case intersection_type::triangle:
         case intersection_type::curve:
             assert(false);
-            color = float4(1.0, 0.0, 1.0, 1.0);
+            return float4(1.0, 0.0, 1.0, 1.0);
     }
+}
+
+kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[texture(0)]],
+                               uint2 grid_index [[thread_position_in_grid]],
+                               constant CameraConfig const &camera_config [[buffer(1)]],
+                               constant RenderConfig const &render_config [[buffer(2)]],
+                               primitive_acceleration_structure accelerationStructure [[buffer(3)]],
+                               intersection_function_table<triangle_data> functionTable [[buffer(4)]])
+{
+    Camera camera(color_buffer.get_width(), color_buffer.get_height(), camera_config);
+    RNG rng(grid_index[0], grid_index[1]);
+    world w = { accelerationStructure, functionTable };
+
+    float4 color = 0;
+    for (uint i = 0; i < render_config.samples_per_pixel; i++) {
+        auto ray = camera.get_ray(grid_index, &rng);
+        color += get_ray_color(ray, w, &rng);
+    }
+    color /= render_config.samples_per_pixel;
     color_buffer.write(color, grid_index);
 }
 
@@ -155,7 +274,8 @@ BoundingBoxResult intersectionFunction(float3 origin [[origin]],
         // TODO: Should it be multiplied by vector length?
         float distance = e.t();
         if (distance >= minDistance && distance <= maxDistance) {
-            payload.normal = e.normal();
+            payload.point = e.point();
+            payload.set_normal(e.normal(), direction);
             return { true, distance };
         }
     }
