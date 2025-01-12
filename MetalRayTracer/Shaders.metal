@@ -100,6 +100,11 @@ struct Payload {
     float3 normal;
 };
 
+float4 background_color(float3 direction) {
+    auto a = 0.5 * direction.y + 1.0;
+    return (1.0-a) * float4(1.0, 1.0, 1.0, 1.0) + a * float4(0.5, 0.7, 1.0, 1.0);
+}
+
 kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[texture(0)]],
                                uint2 grid_index [[thread_position_in_grid]],
                                primitive_acceleration_structure accelerationStructure [[buffer(1)]],
@@ -121,10 +126,10 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     float4 color;
     switch (intersection.type) {
         case intersection_type::none:
-            color = float4(0.0, 0.0, 0.0, 1.0);
+            color = background_color(direction);
             break;
         case intersection_type::bounding_box:
-            color = float4(1.0, 0.5, 0.0, 1.0);
+            color = 0.5*float4(payload.normal.x+1, payload.normal.y+1, payload.normal.z+1, 1.0);
             break;
         case intersection_type::triangle:
         case intersection_type::curve:
