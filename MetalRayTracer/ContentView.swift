@@ -113,7 +113,7 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setTexture(drawable.texture, index: 0)
         var camera = scene.camera
         renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: 1)
-        var renderConfig = RenderConfig()
+        var renderConfig = RenderConfig(samplesPerPixel: 20, maxDepth: 20)
         renderEncoder.setBytes(&renderConfig, length: MemoryLayout<RenderConfig>.stride, index: 2)
         renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: 3)
         renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: 4)

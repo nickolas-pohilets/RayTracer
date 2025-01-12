@@ -62,6 +62,15 @@ public:
             }
         }
     }
+
+    float3 random_unit_vector_on_hemisphere(float3 normal) {
+        float3 v = random_unit_vector_3d();
+        if (dot(v, normal) > 0.0) {
+            return v; // In the same hemisphere as the normal
+        } else {
+            return -v; // In the opposite hemisphere as the normal
+        }
+    }
 };
 
 typedef pcg32 RNG;
@@ -216,26 +225,38 @@ struct world {
     intersection_function_table<triangle_data> function_table;
 };
 
-float4 background_color(float3 direction) {
+float3 background_color(float3 direction) {
     auto a = 0.5 * direction.y + 1.0;
-    return (1.0-a) * float4(1.0, 1.0, 1.0, 1.0) + a * float4(0.5, 0.7, 1.0, 1.0);
+    return (1.0-a) * float3(1.0, 1.0, 1.0) + a * float3(0.5, 0.7, 1.0);
 }
 
-float4 get_ray_color(ray r, world w, thread RNG *rng) {
-    intersector<triangle_data> intersector;
-    Payload payload;
-    intersection_result<triangle_data> intersection = intersector.intersect(r, w.acceleration_structure, w.function_table, payload);
+float3 get_ray_color(ray r, world w, thread RNG *rng, uint max_depth) {
+    float3 attenuation = 1;
+    while (max_depth > 0) {
+        intersector<triangle_data> intersector;
+        Payload payload;
+        intersection_result<triangle_data> intersection = intersector.intersect(r, w.acceleration_structure, w.function_table, payload);
 
-    switch (intersection.type) {
-        case intersection_type::none:
-            return background_color(r.direction);
-        case intersection_type::bounding_box:
-            return 0.5*float4(payload.normal.x+1, payload.normal.y+1, payload.normal.z+1, 1.0);
-        case intersection_type::triangle:
-        case intersection_type::curve:
-            assert(false);
-            return float4(1.0, 0.0, 1.0, 1.0);
+        switch (intersection.type) {
+            case intersection_type::none: {
+                return attenuation * background_color(r.direction);
+            }
+            case intersection_type::bounding_box: {
+                float3 direction = normalize(payload.normal + rng->random_unit_vector_3d());
+                r = ray(payload.point, direction, 0.0001);
+                attenuation *= 0.5;
+                max_depth--;
+                continue;
+            }
+            case intersection_type::triangle:
+            case intersection_type::curve: {
+                assert(false);
+                return float3(1.0, 0.0, 1.0);
+            }
+        }
     }
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    return float3(0, 0, 0);
 }
 
 kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[texture(0)]],
@@ -249,13 +270,13 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     RNG rng(grid_index[0], grid_index[1]);
     world w = { accelerationStructure, functionTable };
 
-    float4 color = 0;
+    float3 color = 0;
     for (uint i = 0; i < render_config.samples_per_pixel; i++) {
         auto ray = camera.get_ray(grid_index, &rng);
-        color += get_ray_color(ray, w, &rng);
+        color += get_ray_color(ray, w, &rng, render_config.max_depth);
     }
     color /= render_config.samples_per_pixel;
-    color_buffer.write(color, grid_index);
+    color_buffer.write(float4(color, 1.0), grid_index);
 }
 
 template<typename T>
