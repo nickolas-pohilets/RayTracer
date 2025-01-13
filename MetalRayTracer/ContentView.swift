@@ -58,11 +58,14 @@ class Renderer: NSObject, MTKViewDelegate {
         let kernel = lib.makeFunction(name: "ray_tracing_kernel")!
 
         // Load functions from Metal library
-        var functions = (0..<sceneBuffers.spheresBuffers.count).map { k in lib.makeFunction(name: "sphereIntersectionFunction\(k)")! }
+        var functions = sceneBuffers.renderables.mapValues { r in
+            lib.makeFunction(name: r.intersectionFunctionName)!
+        }
+        var functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
 
         // Attach functions to ray tracing compute pipeline descriptor
         let linkedFunctions = MTLLinkedFunctions()
-        linkedFunctions.functions = functions
+        linkedFunctions.functions = Array(functions.values)
 
         let pipelineDescriptor = MTLComputePipelineDescriptor()
         pipelineDescriptor.computeFunction = kernel
@@ -73,24 +76,21 @@ class Renderer: NSObject, MTKViewDelegate {
         do {
             // Allocate intersection function table
             let descriptor = MTLIntersectionFunctionTableDescriptor()
-
-            let intersectionFunctions = functions
-
-            descriptor.functionCount = intersectionFunctions.count
+            descriptor.functionCount = functionsTableSize
 
             let functionTable = pipeline.makeIntersectionFunctionTable(descriptor: descriptor)!
-
-            for i in 0 ..< intersectionFunctions.count {
+            for i in 0..<functionsTableSize {
+                guard let f = functions[i] else { continue }
                 // Get a handle to the linked intersection function in the pipeline state
-                let functionHandle = pipeline.functionHandle(function: intersectionFunctions[i])
+                let functionHandle = pipeline.functionHandle(function: f)
 
                 // Insert the function handle into the table
                 functionTable.setFunction(functionHandle, index: i)
             }
 
             // Bind intersection function resources
-            for (index, buffer) in sceneBuffers.spheresBuffers.enumerated() {
-                functionTable.setBuffer(buffer, offset: 0, index: index)
+            for (index, r) in sceneBuffers.renderables {
+                functionTable.setBuffer(r.buffer, offset: 0, index: index)
             }
 
             self.intersectionFunctionsTable = functionTable
@@ -113,13 +113,14 @@ class Renderer: NSObject, MTKViewDelegate {
 
         let renderEncoder = commandBuffer.makeComputeCommandEncoder()!
         renderEncoder.setComputePipelineState(pipeline)
-        renderEncoder.setTexture(drawable.texture, index: 0)
+        renderEncoder.setTexture(drawable.texture, index: Int(kernel_buffers.output_texture.rawValue))
         var camera = scene.camera
-        renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: 1)
+        renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: Int(kernel_buffers.camera_config.rawValue))
         var renderConfig = RenderConfig(samplesPerPixel: 20, maxDepth: 20)
-        renderEncoder.setBytes(&renderConfig, length: MemoryLayout<RenderConfig>.stride, index: 2)
-        renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: 3)
-        renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: 4)
+        renderEncoder.setBytes(&renderConfig, length: MemoryLayout<RenderConfig>.stride, index: Int(kernel_buffers.render_config.rawValue))
+        renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: Int(kernel_buffers.acceleration_structure.rawValue))
+        renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: Int(kernel_buffers.function_table.rawValue))
+        renderEncoder.setBuffer(sceneBuffers.materialsBuffer, offset: 0, index: Int(kernel_buffers.materials.rawValue))
 
         let threadGroupWidth = pipeline.threadExecutionWidth
         let threadGroupHeight = pipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth
