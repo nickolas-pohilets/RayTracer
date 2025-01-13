@@ -8,29 +8,39 @@ import Metal
 
 struct SceneBuffers {
     let accelerationStructure: any MTLAccelerationStructure
-    let spheresBuffer: any MTLBuffer
+    let spheresBuffers: [any MTLBuffer]
 
     init(scene: Scene, device: MTLDevice, commandQueue: MTLCommandQueue) {
         // Create a primitive acceleration structure descriptor
         let accelerationStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
 
-        // Create one or more bounding box geometry descriptors:
-        let geometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+        var geometryDescriptors: [MTLAccelerationStructureGeometryDescriptor] = []
+        var spheresBuffers: [any MTLBuffer] = []
 
-        let boundingBoxBuffer = device.makeBuffer(length: MemoryLayout<MTLAxisAlignedBoundingBox>.stride * scene.objects.count)!
-        spheresBuffer = device.makeBuffer(length: MemoryLayout<Sphere>.stride * scene.objects.count)!
-        var pBox = boundingBoxBuffer.contents().assumingMemoryBound(to: MTLAxisAlignedBoundingBox.self)
-        var pSphere = spheresBuffer.contents().assumingMemoryBound(to: Sphere.self)
-        for obj in scene.objects {
-            pSphere.pointee = obj
-            pSphere += 1
-            pBox.pointee = obj.boundingBox
-            pBox += 1
+        for group in scene.objects {
+            // Create one or more bounding box geometry descriptors:
+            let geometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+
+            let boundingBoxBuffer = device.makeBuffer(length: MemoryLayout<MTLAxisAlignedBoundingBox>.stride * group.count)!
+            let spheresBuffer = device.makeBuffer(length: MemoryLayout<Sphere>.stride * group.count)!
+            var pBox = boundingBoxBuffer.contents().assumingMemoryBound(to: MTLAxisAlignedBoundingBox.self)
+            var pSphere = spheresBuffer.contents().assumingMemoryBound(to: Sphere.self)
+            for obj in group {
+                pSphere.pointee = obj
+                pSphere += 1
+                pBox.pointee = obj.boundingBox
+                pBox += 1
+            }
+            geometryDescriptor.boundingBoxBuffer = boundingBoxBuffer
+            geometryDescriptor.boundingBoxCount = group.count
+            geometryDescriptor.intersectionFunctionTableOffset = spheresBuffers.count
+
+            spheresBuffers.append(spheresBuffer)
+            geometryDescriptors.append(geometryDescriptor)
         }
-        geometryDescriptor.boundingBoxBuffer = boundingBoxBuffer
-        geometryDescriptor.boundingBoxCount = scene.objects.count
 
-        accelerationStructureDescriptor.geometryDescriptors = [ geometryDescriptor ]
+        self.spheresBuffers = spheresBuffers
+        accelerationStructureDescriptor.geometryDescriptors = geometryDescriptors
 
         // Query for the sizes needed to store and build the acceleration structure.
         let accelSizes = device.accelerationStructureSizes(descriptor: accelerationStructureDescriptor)

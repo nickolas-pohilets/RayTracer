@@ -280,14 +280,13 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
 }
 
 template<typename T>
-[[intersection(bounding_box)]]
-BoundingBoxResult intersectionFunction(float3 origin [[origin]],
-                                       float3 direction [[direction]],
-                                       float minDistance [[min_distance]],
-                                       float maxDistance [[max_distance]],
-                                       uint primitiveIndex [[primitive_id]],
-                                       device T *objects [[buffer (0)]],
-                                       ray_data Payload & payload [[payload]])
+BoundingBoxResult intersection(float3 origin,
+                               float3 direction,
+                               float minDistance,
+                               float maxDistance,
+                               uint primitiveIndex,
+                               device T *objects,
+                               ray_data Payload & payload)
 {
     Ray3D ray(origin, direction);
     typename T::HitEnumerator e(objects[primitiveIndex], ray);
@@ -303,12 +302,38 @@ BoundingBoxResult intersectionFunction(float3 origin [[origin]],
     return { false, 0.0f };
 }
 
-template [[host_name("sphereIntersectionFunction")]]
 [[intersection(bounding_box)]]
-BoundingBoxResult intersectionFunction<Sphere>(float3 origin [[origin]],
+BoundingBoxResult sphereIntersectionFunction0(float3 origin [[origin]],
                                                float3 direction [[direction]],
                                                float minDistance [[min_distance]],
                                                float maxDistance [[max_distance]],
                                                uint primitiveIndex [[primitive_id]],
-                                               device Sphere *objects [[buffer (0)]],
-                                               ray_data Payload & payload [[payload]]);
+                                               device Sphere *objects [[buffer (renderable_sphere0)]],
+                                             ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, primitiveIndex, objects, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult sphereIntersectionFunction1(float3 origin [[origin]],
+                                               float3 direction [[direction]],
+                                               float minDistance [[min_distance]],
+                                               float maxDistance [[max_distance]],
+                                               uint primitiveIndex [[primitive_id]],
+                                               device Sphere *objects [[buffer (renderable_sphere1)]],
+                                             ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, primitiveIndex, objects, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult sphereIntersectionFunction2(float3 origin [[origin]],
+                                               float3 direction [[direction]],
+                                               float minDistance [[min_distance]],
+                                               float maxDistance [[max_distance]],
+                                               uint primitiveIndex [[primitive_id]],
+                                               device Sphere *objects [[buffer (renderable_sphere2)]],
+                                             ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, primitiveIndex, objects, payload);
+}

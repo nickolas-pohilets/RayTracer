@@ -30,3 +30,9 @@ struct Sphere {
     class HitEnumerator;
 #endif
 };
+
+enum RenderableTypeBufferIndex {
+    renderable_sphere0,
+    renderable_sphere1,
+    renderable_sphere2,
+};

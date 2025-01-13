@@ -58,11 +58,11 @@ class Renderer: NSObject, MTKViewDelegate {
         let kernel = lib.makeFunction(name: "ray_tracing_kernel")!
 
         // Load functions from Metal library
-        let sphereIntersectionFunction = lib.makeFunction(name: "sphereIntersectionFunction")!
+        var functions = (0..<sceneBuffers.spheresBuffers.count).map { k in lib.makeFunction(name: "sphereIntersectionFunction\(k)")! }
 
         // Attach functions to ray tracing compute pipeline descriptor
         let linkedFunctions = MTLLinkedFunctions()
-        linkedFunctions.functions = [ sphereIntersectionFunction ]
+        linkedFunctions.functions = functions
 
         let pipelineDescriptor = MTLComputePipelineDescriptor()
         pipelineDescriptor.computeFunction = kernel
@@ -74,7 +74,7 @@ class Renderer: NSObject, MTKViewDelegate {
             // Allocate intersection function table
             let descriptor = MTLIntersectionFunctionTableDescriptor()
 
-            let intersectionFunctions = [sphereIntersectionFunction ]
+            let intersectionFunctions = functions
 
             descriptor.functionCount = intersectionFunctions.count
 
@@ -89,7 +89,10 @@ class Renderer: NSObject, MTKViewDelegate {
             }
 
             // Bind intersection function resources
-            functionTable.setBuffer(sceneBuffers.spheresBuffer, offset: 0, index: 0)
+            for (index, buffer) in sceneBuffers.spheresBuffers.enumerated() {
+                functionTable.setBuffer(buffer, offset: 0, index: index)
+            }
+
             self.intersectionFunctionsTable = functionTable
         }
 
