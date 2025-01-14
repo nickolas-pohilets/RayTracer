@@ -11,6 +11,8 @@
 using namespace metal;
 using namespace metal::raytracing;
 
+constant float const min_vector_length_squared = 1e-24;
+
 
 // See https://www.pcg-random.org/
 class pcg32 {
@@ -45,7 +47,7 @@ public:
             float x = random_f() * 2 - 1;
             float y = random_f() * 2 - 1;
             float lenSq = x * x + y * y;
-            if (1e-24 < lenSq && lenSq <= 1.0) {
+            if (min_vector_length_squared < lenSq && lenSq <= 1.0) {
                 return float2(x, y) / sqrt(lenSq);
             }
         }
@@ -57,7 +59,7 @@ public:
             float y = random_f() * 2 - 1;
             float z = random_f() * 2 - 1;
             float lenSq = x * x + y * y;
-            if (1e-24 < lenSq && lenSq <= 1.0) {
+            if (min_vector_length_squared < lenSq && lenSq <= 1.0) {
                 return float3(x, y, z) / sqrt(lenSq);
             }
         }
@@ -92,6 +94,39 @@ public:
         return origin + t * direction;
     }
 };
+
+float reflectance(float cosθ, float ηRatio) {
+    // Use Schlick's approximation for reflectance.
+    float sqR0 = ((1 - ηRatio) / (1 + ηRatio));
+    float R0 = sqR0 * sqR0;
+    float x = (1 + cosθ); // In our case cosθ is inverted
+    float x2 = x * x;
+    float x4 = x2 * x2;
+    return R0 + (1 - R0) * (x4 * x);
+}
+
+bool refract(float3 v, float3 normal, float ηRatio, float reflectance_random, thread float3 & result) {
+    float cosθ = fmax(dot(v, normal), -1);
+    float3 rPerp = ηRatio * (v - cosθ * normal);
+    float rPerpLenSq = length_squared(rPerp);
+    if (rPerpLenSq > 1) { return false; }
+    if (reflectance_random <= 0) { return false; }
+    if (reflectance_random < 1) {
+        float r = reflectance(cosθ, ηRatio);
+        if (r > reflectance_random) { return false; }
+    }
+    float3 rParallel = normal * -(sqrt(1 - rPerpLenSq));
+    result = rPerp + rParallel;
+    return true;
+}
+
+float3 refract_or_reflect(float3 v, float3 normal, float ηRatio, float reflectance_random) {
+    float3 result;
+    if (refract(v, normal, ηRatio, reflectance_random, result)) {
+        return result;
+    }
+    return reflect(v, normal);
+}
 
 class Sphere::HitEnumerator {
     Sphere _sphere;
@@ -137,6 +172,10 @@ public:
         return (point() - _sphere.center) / _sphere.radius;
     }
 
+    size_t material_offset() const {
+        return _sphere.material_offset;
+    }
+
     //    float3 point;
     //    float3 normal;
     //    var face: Face
@@ -158,6 +197,7 @@ struct Payload {
     float3 point;
     float3 normal;
     face face;
+    size_t material_offset;
 
     void set_normal(float3 front_normal, float3 ray_direction) ray_data {
         if (dot(front_normal, ray_direction) > 0) {
@@ -225,12 +265,54 @@ struct world {
     intersection_function_table<triangle_data> function_table;
 };
 
+bool lambertian_scatter(constant LambertianMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+    while (true) {
+        float3 d = payload.normal + rng->random_unit_vector_3d();
+        float lenSq = length_squared(d);
+        if (lenSq > min_vector_length_squared) {
+            float3 direction = d / sqrt(lenSq);
+            scattered = Ray3D(payload.point, direction);
+            break;
+        }
+    }
+    attenuation = material->albedo;
+    return true;
+}
+
+bool metal_scatter(constant MetalMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+    float3 reflected = reflect(ray.direction, payload.normal) + material->fuzz * rng->random_unit_vector_3d();
+    if (dot(reflected, payload.normal) < 0) { return false; }
+    attenuation = material->albedo;
+    scattered = Ray3D(payload.point, normalize(reflected));
+    return true;
+}
+
+bool dielectric_scatter(constant DielectricMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+    float ηRatio = payload.face == face::front ? 1.0 / material->refraction_index : material->refraction_index;
+    float3 refracted = refract_or_reflect(ray.direction, payload.normal, ηRatio, rng->random_f());
+    attenuation = 1;
+    scattered = Ray3D(payload.point, refracted);
+    return true;
+}
+
+bool scatter(constant void const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+    MaterialKind kind = *reinterpret_cast<constant MaterialKind const*>(material);
+    switch (kind) {
+        case material_kind_lambertian:
+            return lambertian_scatter(reinterpret_cast<constant LambertianMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+        case material_kind_metal:
+            return metal_scatter(reinterpret_cast<constant MetalMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+        case material_kind_dielectric:
+            return dielectric_scatter(reinterpret_cast<constant DielectricMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+    }
+}
+
 float3 background_color(float3 direction) {
     auto a = 0.5 * direction.y + 1.0;
     return (1.0-a) * float3(1.0, 1.0, 1.0) + a * float3(0.5, 0.7, 1.0);
 }
 
-float3 get_ray_color(ray r, world w, thread RNG *rng, uint max_depth) {
+float3 get_ray_color(ray r, world w, constant uchar const * meterials, thread RNG *rng, uint max_depth) {
     float3 attenuation = 1;
     while (max_depth > 0) {
         intersector<triangle_data> intersector;
@@ -242,9 +324,15 @@ float3 get_ray_color(ray r, world w, thread RNG *rng, uint max_depth) {
                 return attenuation * background_color(r.direction);
             }
             case intersection_type::bounding_box: {
-                float3 direction = normalize(payload.normal + rng->random_unit_vector_3d());
-                r = ray(payload.point, direction, 0.0001);
-                attenuation *= 0.5;
+                constant uchar const * material = meterials + payload.material_offset;
+                Ray3D old_ray(r.origin, r.direction);
+                float3 material_attenuation;
+                Ray3D new_ray(0, 0);
+                if (!scatter(material, old_ray, payload, rng, material_attenuation, new_ray)) {
+                    return 0;
+                }
+                attenuation *= material_attenuation;
+                r = ray(new_ray.origin, new_ray.direction, 0.0001);
                 max_depth--;
                 continue;
             }
@@ -265,7 +353,7 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
                                constant RenderConfig const &render_config [[buffer(kernel_buffer_render_config)]],
                                primitive_acceleration_structure accelerationStructure [[buffer(kernel_buffer_acceleration_structure)]],
                                intersection_function_table<triangle_data> functionTable [[buffer(kernel_buffer_function_table)]],
-                               constant void const *materials [[buffer(kernel_buffer_materials)]])
+                               constant uchar const *materials [[buffer(kernel_buffer_materials)]])
 {
     Camera camera(color_buffer.get_width(), color_buffer.get_height(), camera_config);
     RNG rng(grid_index[0], grid_index[1]);
@@ -274,9 +362,10 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     float3 color = 0;
     for (uint i = 0; i < render_config.samples_per_pixel; i++) {
         auto ray = camera.get_ray(grid_index, &rng);
-        color += get_ray_color(ray, w, &rng, render_config.max_depth);
+        color += get_ray_color(ray, w, materials, &rng, render_config.max_depth);
     }
     color /= render_config.samples_per_pixel;
+    color = min(sqrt(color), 1);
     color_buffer.write(float4(color, 1.0), grid_index);
 }
 
@@ -297,6 +386,7 @@ BoundingBoxResult intersection(float3 origin,
         if (distance >= minDistance && distance <= maxDistance) {
             payload.point = e.point();
             payload.set_normal(e.normal(), direction);
+            payload.material_offset = e.material_offset();
             return { true, distance };
         }
     }
