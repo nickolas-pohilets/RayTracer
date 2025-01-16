@@ -8,8 +8,7 @@ import Metal
 
 struct SceneBuffers {
     let accelerationStructure: any MTLAccelerationStructure
-    typealias Renderables = [Int: (buffer: any MTLBuffer, intersectionFunctionName: String)]
-    let renderables: Renderables
+    let intersectionFunctions: [Int: String]
     let materialsBuffer: any MTLBuffer
 
     init(scene: Scene, device: MTLDevice, commandQueue: MTLCommandQueue) {
@@ -26,17 +25,17 @@ struct SceneBuffers {
         }
 
         var geometryDescriptors: [MTLAccelerationStructureGeometryDescriptor] = []
-        var renderables: Renderables = [:]
+        var intersectionFunctions: [Int: String] = [:]
         for (kind, group) in grouper.groups {
             // Create one or more bounding box geometry descriptors:
-            let (geometryDescriptor, renderablesBuffer) = group.makeBuffers(device: device)
+            let geometryDescriptor = group.makeGeometryDescriptor(device: device)
             geometryDescriptors.append(geometryDescriptor)
 
             let key = Int(kind.rawValue)
-            assert(renderables[key] == nil)
-            renderables[key] = (renderablesBuffer, group.intersectionFunctionName)
+            assert(intersectionFunctions[key] == nil)
+            intersectionFunctions[key] = group.intersectionFunctionName
         }
-        self.renderables = renderables
+        self.intersectionFunctions = intersectionFunctions
 
         // Create a primitive acceleration structure descriptor
         let accelerationStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
@@ -75,7 +74,7 @@ struct SceneBuffers {
 protocol AnyRenderableGroup: AnyObject {
     var kind: RenderableKind { get }
     var intersectionFunctionName: String { get }
-    func makeBuffers(device: MTLDevice) -> (geometryDescriptor: MTLAccelerationStructureBoundingBoxGeometryDescriptor, renderablesBuffer: any MTLBuffer)
+    func makeGeometryDescriptor(device: MTLDevice) -> MTLAccelerationStructureBoundingBoxGeometryDescriptor
 }
 
 class RenderableGroup<Impl: RenderableImpl>: AnyRenderableGroup {
@@ -84,7 +83,7 @@ class RenderableGroup<Impl: RenderableImpl>: AnyRenderableGroup {
     var kind: RenderableKind { Impl.kind }
     var intersectionFunctionName: String { Impl.intersectionFunctionName }
 
-    func makeBuffers(device: MTLDevice) -> (geometryDescriptor: MTLAccelerationStructureBoundingBoxGeometryDescriptor, renderablesBuffer: any MTLBuffer) {
+    func makeGeometryDescriptor(device: MTLDevice) -> MTLAccelerationStructureBoundingBoxGeometryDescriptor {
         let boundingBoxBuffer = device.makeBuffer(length: MemoryLayout<MTLAxisAlignedBoundingBox>.stride * objects.count)!
         let renderablesBuffer = device.makeBuffer(length: MemoryLayout<Impl>.stride * objects.count)!
         var pBox = boundingBoxBuffer.contents().assumingMemoryBound(to: MTLAxisAlignedBoundingBox.self)
@@ -98,8 +97,11 @@ class RenderableGroup<Impl: RenderableImpl>: AnyRenderableGroup {
         let geometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
         geometryDescriptor.boundingBoxBuffer = boundingBoxBuffer
         geometryDescriptor.boundingBoxCount = objects.count
+        geometryDescriptor.primitiveDataBuffer = renderablesBuffer
+        geometryDescriptor.primitiveDataStride = MemoryLayout<Impl>.stride
+        geometryDescriptor.primitiveDataElementSize = MemoryLayout<Impl>.size
         geometryDescriptor.intersectionFunctionTableOffset = Int(Impl.kind.rawValue)
-        return (geometryDescriptor, renderablesBuffer)
+        return geometryDescriptor
     }
 }
 

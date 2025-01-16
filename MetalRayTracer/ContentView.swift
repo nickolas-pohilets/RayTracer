@@ -58,8 +58,8 @@ class Renderer: NSObject, MTKViewDelegate {
         let kernel = lib.makeFunction(name: "ray_tracing_kernel")!
 
         // Load functions from Metal library
-        var functions = sceneBuffers.renderables.mapValues { r in
-            lib.makeFunction(name: r.intersectionFunctionName)!
+        var functions = sceneBuffers.intersectionFunctions.mapValues { name in
+            lib.makeFunction(name: name)!
         }
         var functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
 
@@ -86,11 +86,6 @@ class Renderer: NSObject, MTKViewDelegate {
 
                 // Insert the function handle into the table
                 functionTable.setFunction(functionHandle, index: i)
-            }
-
-            // Bind intersection function resources
-            for (index, r) in sceneBuffers.renderables {
-                functionTable.setBuffer(r.buffer, offset: 0, index: index)
             }
 
             self.intersectionFunctionsTable = functionTable

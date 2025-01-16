@@ -139,12 +139,11 @@ BoundingBoxResult intersection(float3 origin,
                                float3 direction,
                                float minDistance,
                                float maxDistance,
-                               uint primitiveIndex,
-                               device T *objects,
+                               device T const &object,
                                ray_data Payload & payload)
 {
     Ray3D ray(origin, direction);
-    typename T::HitEnumerator e(objects[primitiveIndex], ray);
+    typename T::HitEnumerator e(object, ray);
     for (; e.hasNext(); e.move()) {
         // TODO: Should it be multiplied by vector length?
         float distance = e.t();
@@ -160,14 +159,13 @@ BoundingBoxResult intersection(float3 origin,
 
 [[intersection(bounding_box)]]
 BoundingBoxResult sphereIntersectionFunction(float3 origin [[origin]],
-                                               float3 direction [[direction]],
-                                               float minDistance [[min_distance]],
-                                               float maxDistance [[max_distance]],
-                                               uint primitiveIndex [[primitive_id]],
-                                               device Sphere *objects [[buffer(renderable_kind_sphere)]],
+                                             float3 direction [[direction]],
+                                             float minDistance [[min_distance]],
+                                             float maxDistance [[max_distance]],
+                                             device Sphere const *object [[primitive_data]],
                                              ray_data Payload & payload [[payload]])
 {
-    return intersection(origin, direction, minDistance, maxDistance, primitiveIndex, objects, payload);
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
 }
 
 [[intersection(bounding_box)]]
@@ -176,9 +174,9 @@ BoundingBoxResult cylinderIntersectionFunction(float3 origin [[origin]],
                                                float minDistance [[min_distance]],
                                                float maxDistance [[max_distance]],
                                                uint primitiveIndex [[primitive_id]],
-                                               device Cylinder *objects [[buffer(renderable_kind_cylinder)]],
-                                             ray_data Payload & payload [[payload]])
+                                               device Cylinder const *object [[primitive_data]],
+                                               ray_data Payload & payload [[payload]])
 {
-    return intersection(origin, direction, minDistance, maxDistance, primitiveIndex, objects, payload);
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
 }
 
