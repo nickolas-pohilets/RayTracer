@@ -47,6 +47,7 @@
 		4A1A07862D1C682D00FD2AC2 /* Calculator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Calculator; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RayTracingKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayTracingKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4A75B7FA2D36BD19007CC493 /* MetalRayTracerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetalRayTracerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4AF18FF42D30414E002C48FA /* MetalRayTracer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetalRayTracer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -82,6 +83,11 @@
 		4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = RayTracingKitTests;
+			sourceTree = "<group>";
+		};
+		4A75B7FB2D36BD19007CC493 /* MetalRayTracerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MetalRayTracerTests;
 			sourceTree = "<group>";
 		};
 		4AF18FF52D30414E002C48FA /* MetalRayTracer */ = {
@@ -122,6 +128,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4A75B7F72D36BD19007CC493 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4AF18FF12D30414E002C48FA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -140,6 +153,7 @@
 				4A1A084D2D2AFD9500FD2AC2 /* RayTracingKit */,
 				4A1A08572D2AFD9500FD2AC2 /* RayTracingKitTests */,
 				4AF18FF52D30414E002C48FA /* MetalRayTracer */,
+				4A75B7FB2D36BD19007CC493 /* MetalRayTracerTests */,
 				4A1A08622D2AFD9E00FD2AC2 /* Frameworks */,
 				4A1A072C2D1B501A00FD2AC2 /* Products */,
 			);
@@ -153,6 +167,7 @@
 				4A1A084C2D2AFD9500FD2AC2 /* RayTracingKit.framework */,
 				4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */,
 				4AF18FF42D30414E002C48FA /* MetalRayTracer.app */,
+				4A75B7FA2D36BD19007CC493 /* MetalRayTracerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -267,6 +282,28 @@
 			productReference = 4A1A08532D2AFD9500FD2AC2 /* RayTracingKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		4A75B7F92D36BD19007CC493 /* MetalRayTracerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A75B8002D36BD19007CC493 /* Build configuration list for PBXNativeTarget "MetalRayTracerTests" */;
+			buildPhases = (
+				4A75B7F62D36BD19007CC493 /* Sources */,
+				4A75B7F72D36BD19007CC493 /* Frameworks */,
+				4A75B7F82D36BD19007CC493 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4A75B7FB2D36BD19007CC493 /* MetalRayTracerTests */,
+			);
+			name = MetalRayTracerTests;
+			packageProductDependencies = (
+			);
+			productName = MetalRayTracerTests;
+			productReference = 4A75B7FA2D36BD19007CC493 /* MetalRayTracerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		4AF18FF32D30414E002C48FA /* MetalRayTracer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4AF190022D30414F002C48FA /* Build configuration list for PBXNativeTarget "MetalRayTracer" */;
@@ -311,6 +348,11 @@
 					4A1A08522D2AFD9500FD2AC2 = {
 						CreatedOnToolsVersion = 16.1;
 					};
+					4A75B7F92D36BD19007CC493 = {
+						CreatedOnToolsVersion = 16.1;
+						LastSwiftMigration = 1610;
+						TestTargetID = 4AF18FF32D30414E002C48FA;
+					};
 					4AF18FF32D30414E002C48FA = {
 						CreatedOnToolsVersion = 16.1;
 					};
@@ -335,6 +377,7 @@
 				4A1A084B2D2AFD9500FD2AC2 /* RayTracingKit */,
 				4A1A08522D2AFD9500FD2AC2 /* RayTracingKitTests */,
 				4AF18FF32D30414E002C48FA /* MetalRayTracer */,
+				4A75B7F92D36BD19007CC493 /* MetalRayTracerTests */,
 			);
 		};
 /* End PBXProject section */
@@ -348,6 +391,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4A1A08512D2AFD9500FD2AC2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A75B7F82D36BD19007CC493 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -386,6 +436,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4A1A084F2D2AFD9500FD2AC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4A75B7F62D36BD19007CC493 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -673,6 +730,43 @@
 			};
 			name = Release;
 		};
+		4A75B8012D36BD19007CC493 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MetalRayTracerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "MetalRayTracerTests/MetalRayTracerTests-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		4A75B8022D36BD19007CC493 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TWAR4Z49FB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MetalRayTracerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "MetalRayTracerTests/MetalRayTracerTests-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 		4AF190002D30414F002C48FA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -773,6 +867,15 @@
 			buildConfigurations = (
 				4A1A085D2D2AFD9500FD2AC2 /* Debug */,
 				4A1A085E2D2AFD9500FD2AC2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A75B8002D36BD19007CC493 /* Build configuration list for PBXNativeTarget "MetalRayTracerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4A75B8012D36BD19007CC493 /* Debug */,
+				4A75B8022D36BD19007CC493 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
