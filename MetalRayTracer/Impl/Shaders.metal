@@ -113,6 +113,7 @@ float3 get_ray_color(ray r, world w, constant uchar const * meterials, thread RN
 }
 
 kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[texture(kernel_buffer_output_texture)]],
+                               texture2d<ushort, access::read_write> acc_buffer [[texture(kernel_buffer_accumulator_texture)]],
                                uint2 grid_index [[thread_position_in_grid]],
                                constant CameraConfig const &camera_config [[buffer(kernel_buffer_camera_config)]],
                                constant RenderConfig const &render_config [[buffer(kernel_buffer_render_config)]],
@@ -121,7 +122,9 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
                                constant uchar const *materials [[buffer(kernel_buffer_materials)]])
 {
     Camera camera(color_buffer.get_width(), color_buffer.get_height(), camera_config);
-    RNG rng(grid_index[0], grid_index[1]);
+    uint32_t rng_seed_hi = (uint32_t)(render_config.rng_seed >> 32);
+    uint32_t rng_seed_lo = (uint32_t)render_config.rng_seed;
+    RNG rng(grid_index[0] + rng_seed_lo, grid_index[1] + rng_seed_hi);
     world w = { accelerationStructure, functionTable };
 
     float3 color = 0;
@@ -131,7 +134,12 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     }
     color /= render_config.samples_per_pixel;
     color = min(sqrt(color), 1);
-    color_buffer.write(float4(color, 1.0), grid_index);
+    float3 old_color = (float3(acc_buffer.read(grid_index).rgb) + nextafter(0.5, 0)) / 1024.f;
+    float t = 1.f / render_config.pass_counter;
+    float3 total_color = old_color * (1 - t) + color * t;
+    color_buffer.write(float4(total_color, 1.0), grid_index);
+    ushort3 uint_color = min(ushort3(total_color * 1024), 1023);
+    acc_buffer.write(ushort4(uint_color, 0), grid_index);
 }
 
 template<typename T>

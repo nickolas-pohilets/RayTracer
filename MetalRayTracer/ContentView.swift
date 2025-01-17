@@ -9,7 +9,46 @@ import SwiftUI
 import Metal
 import MetalKit
 
-struct ContentView: NSViewRepresentable {
+struct ContentView: View {
+    // Degrees, [0, 360)
+    @State var cameraYaw: Float
+    // Degrees, [-90, +90]
+    @State var cameraPitch: Float
+
+    var initialScene: Scene
+
+    init(scene: Scene) {
+        self.initialScene = scene
+        let camera = scene.camera
+        let (yaw, pitch) = camera.angles
+        self.cameraYaw = yaw
+        self.cameraPitch = pitch
+    }
+
+    var currentScene: Scene {
+        Scene(
+            camera: initialScene.camera.withAngles(yaw: cameraYaw, pitch: cameraPitch),
+            objects: initialScene.objects
+        )
+    }
+
+    var body: some View {
+        HStack {
+            SceneView(scene: currentScene)
+            VStack {
+                Text("Yaw: \(cameraYaw)")
+                Slider(value: $cameraYaw, in: -360...360)
+                Divider()
+                Text("Pitch: \(cameraPitch)")
+                Slider(value: $cameraPitch, in: -90...90)
+            }
+            .padding()
+            .frame(width: 200)
+        }
+    }
+}
+
+struct SceneView: NSViewRepresentable {
     var scene: Scene
 
     func makeCoordinator() -> Renderer {
@@ -18,8 +57,8 @@ struct ContentView: NSViewRepresentable {
     func makeNSView(context: Context) -> MTKView {
         let mtkView = MTKView()
         mtkView.delegate = context.coordinator
+        context.coordinator.view = mtkView
         mtkView.preferredFramesPerSecond = 60
-        mtkView.enableSetNeedsDisplay = true
 
         if let metalDevice = MTLCreateSystemDefaultDevice() {
             mtkView.device = metalDevice
@@ -37,12 +76,22 @@ struct ContentView: NSViewRepresentable {
 }
 
 class Renderer: NSObject, MTKViewDelegate {
-    var scene: Scene
+    var view: MTKView?
+
+    var scene: Scene {
+        didSet {
+            if oldValue.camera != scene.camera {
+                setNeedsRedraw()
+            }
+        }
+    }
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var sceneBuffers: SceneBuffers
     var pipeline: MTLComputePipelineState
     var intersectionFunctionsTable: any MTLIntersectionFunctionTable
+    var passCounter: Int = 0
+    var accumulator: MTLTexture?
 
     init(_ scene: Scene) {
 
@@ -58,10 +107,10 @@ class Renderer: NSObject, MTKViewDelegate {
         let kernel = lib.makeFunction(name: "ray_tracing_kernel")!
 
         // Load functions from Metal library
-        var functions = sceneBuffers.intersectionFunctions.mapValues { name in
+        let functions = sceneBuffers.intersectionFunctions.mapValues { name in
             lib.makeFunction(name: name)!
         }
-        var functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
+        let functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
 
         // Attach functions to ray tracing compute pipeline descriptor
         let linkedFunctions = MTLLinkedFunctions()
@@ -95,23 +144,35 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        self.setNeedsRedraw()
+    }
 
+    private func setNeedsRedraw() {
+        passCounter = 0
+        view?.isPaused = false
     }
 
     func draw(in view: MTKView) {
-
         guard let drawable = view.currentDrawable else {
             return
+        }
+
+        passCounter += 1
+        if passCounter >= 200 {
+            view.isPaused = true
         }
 
         let commandBuffer = commandQueue.makeCommandBuffer()!
 
         let renderEncoder = commandBuffer.makeComputeCommandEncoder()!
         renderEncoder.setComputePipelineState(pipeline)
-        renderEncoder.setTexture(drawable.texture, index: Int(kernel_buffers.output_texture.rawValue))
+        let outputTexture = drawable.texture
+        renderEncoder.setTexture(outputTexture, index: Int(kernel_buffers.output_texture.rawValue))
+        renderEncoder.setTexture(getAccumulatorTexture(width: outputTexture.width, height: outputTexture.height), index: Int(kernel_buffers.accumulator_texture.rawValue))
         var camera = scene.camera
         renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: Int(kernel_buffers.camera_config.rawValue))
-        var renderConfig = RenderConfig(samplesPerPixel: 50, maxDepth: 10)
+        var rng = SystemRandomNumberGenerator()
+        var renderConfig = RenderConfig(samplesPerPixel: 1, maxDepth: 10, passCounter: passCounter, rngSeed: rng.next())
         renderEncoder.setBytes(&renderConfig, length: MemoryLayout<RenderConfig>.stride, index: Int(kernel_buffers.render_config.rawValue))
         renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: Int(kernel_buffers.acceleration_structure.rawValue))
         renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: Int(kernel_buffers.function_table.rawValue))
@@ -130,5 +191,15 @@ class Renderer: NSObject, MTKViewDelegate {
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }
-}
 
+    func getAccumulatorTexture(width: Int, height: Int) -> MTLTexture {
+        if let accumulator, accumulator.width == width, accumulator.height == height {
+            return accumulator
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgb10a2Uint, width: width, height: height, mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        let texture = device.makeTexture(descriptor: descriptor)!
+        self.accumulator = texture
+        return texture
+    }
+}

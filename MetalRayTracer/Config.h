@@ -22,10 +22,13 @@ struct CameraConfig {
 struct RenderConfig {
     unsigned int samples_per_pixel;
     unsigned int max_depth;
+    unsigned int pass_counter;
+    uint64_t rng_seed;
 } __attribute__((swift_private));
 
 enum kernel_buffers {
     kernel_buffer_output_texture,
+    kernel_buffer_accumulator_texture,
     kernel_buffer_camera_config,
     kernel_buffer_render_config,
     kernel_buffer_acceleration_structure,
