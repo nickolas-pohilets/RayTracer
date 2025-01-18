@@ -124,7 +124,7 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     Camera camera(color_buffer.get_width(), color_buffer.get_height(), camera_config);
     uint32_t rng_seed_hi = (uint32_t)(render_config.rng_seed >> 32);
     uint32_t rng_seed_lo = (uint32_t)render_config.rng_seed;
-    RNG rng(grid_index[0] + rng_seed_lo, grid_index[1] + rng_seed_hi);
+    RNG rng(grid_index[0] * 5569 + rng_seed_lo, grid_index[1] * 2707 + rng_seed_hi);
     world w = { accelerationStructure, functionTable };
 
     float3 color = 0;

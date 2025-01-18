@@ -14,6 +14,8 @@ struct ContentView: View {
     @State var cameraYaw: Float
     // Degrees, [-90, +90]
     @State var cameraPitch: Float
+    @State var focusDistance: Float
+    @State var defocusAngle: Float
 
     var initialScene: Scene
 
@@ -23,13 +25,16 @@ struct ContentView: View {
         let (yaw, pitch) = camera.angles
         self.cameraYaw = yaw
         self.cameraPitch = pitch
+        self.focusDistance = camera.focusDistance
+        self.defocusAngle = camera.defocusAngle
     }
 
     var currentScene: Scene {
-        Scene(
-            camera: initialScene.camera.withAngles(yaw: cameraYaw, pitch: cameraPitch),
-            objects: initialScene.objects
-        )
+        var scene = initialScene
+        scene.camera.angles = (cameraYaw, cameraPitch)
+        scene.camera.defocusAngle = defocusAngle
+        scene.camera.focusDistance = focusDistance
+        return scene
     }
 
     var body: some View {
@@ -41,6 +46,13 @@ struct ContentView: View {
                 Divider()
                 Text("Pitch: \(cameraPitch)")
                 Slider(value: $cameraPitch, in: -90...90)
+                Divider()
+                Text("Focus Distance: \(focusDistance)")
+                Slider(value: $focusDistance, in: 0.1...5)
+                Divider()
+                Text("Defocus Angle: \(defocusAngle)")
+                Slider(value: $defocusAngle, in: 0...30)
+                Spacer()
             }
             .padding()
             .frame(width: 200)

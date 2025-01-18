@@ -28,22 +28,32 @@ struct CameraConfig: Hashable {
     }
 
     var angles: (yaw: Float, pitch: Float) {
-        let v = impl.look_from - impl.look_at
-        let yaw = atan2(v.z, v.x) * 180 / .pi
-        let pitch = atan2(v.y, sqrt(v.x * v.x + v.z * v.z)) * 180 / .pi
-        return (yaw, pitch)
+        get {
+            let v = impl.look_from - impl.look_at
+            let yaw = atan2(v.z, v.x) * 180 / .pi
+            let pitch = atan2(v.y, sqrt(v.x * v.x + v.z * v.z)) * 180 / .pi
+            return (yaw, pitch)
+        }
+        set {
+            let (yaw, pitch) = newValue
+            let d = length(impl.look_from - impl.look_at)
+            let y = sin(pitch * .pi / 180)
+            let h = cos(pitch * .pi / 180)
+            let x = h * cos(yaw * .pi / 180)
+            let z = h * sin(yaw * .pi / 180)
+            let v = vector_float3(x, y, z) * d
+            impl.look_from = impl.look_at + v
+        }
     }
 
-    func withAngles(yaw: Float, pitch: Float) -> Self {
-        let d = length(impl.look_from - impl.look_at)
-        let y = sin(pitch * .pi / 180)
-        let h = cos(pitch * .pi / 180)
-        let x = h * cos(yaw * .pi / 180)
-        let z = h * sin(yaw * .pi / 180)
-        let v = vector_float3(x, y, z) * d
-        var copy = self
-        copy.impl.look_from = copy.impl.look_at + v
-        return copy
+    var defocusAngle: Float {
+        get { impl.defocus_angle }
+        set { impl.defocus_angle = newValue }
+    }
+
+    var focusDistance: Float {
+        get { impl.focus_distance }
+        set { impl.focus_distance = newValue }
     }
 }
 
