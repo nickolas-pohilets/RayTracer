@@ -28,14 +28,13 @@ struct SceneBuffers {
 
         var geometryDescriptors: [MTLAccelerationStructureGeometryDescriptor] = []
         var intersectionFunctions: [Int: String] = [:]
-        for (kind, group) in grouper.groups {
+        for group in grouper.groups.values {
             // Create one or more bounding box geometry descriptors:
             let geometryDescriptor = group.makeGeometryDescriptor(device: device)
             geometryDescriptors.append(geometryDescriptor)
 
-            let key = Int(kind.rawValue)
-            assert(intersectionFunctions[key] == nil)
-            intersectionFunctions[key] = group.intersectionFunctionName
+            assert(intersectionFunctions[group.index] == nil)
+            intersectionFunctions[group.index] = group.intersectionFunctionName
         }
         self.intersectionFunctions = intersectionFunctions
 
@@ -74,15 +73,19 @@ struct SceneBuffers {
 }
 
 protocol AnyRenderableGroup: AnyObject {
-    var kind: RenderableKind { get }
+    var index: Int { get }
     var intersectionFunctionName: String { get }
     func makeGeometryDescriptor(device: MTLDevice) -> MTLAccelerationStructureBoundingBoxGeometryDescriptor
 }
 
 class RenderableGroup<Impl: RenderableImpl>: AnyRenderableGroup {
+    var index: Int
     var objects: [(Impl, MTLAxisAlignedBoundingBox)] = []
 
-    var kind: RenderableKind { Impl.kind }
+    init(index: Int) {
+        self.index = index
+    }
+
     var intersectionFunctionName: String { Impl.intersectionFunctionName }
 
     func makeGeometryDescriptor(device: MTLDevice) -> MTLAccelerationStructureBoundingBoxGeometryDescriptor {
@@ -102,13 +105,13 @@ class RenderableGroup<Impl: RenderableImpl>: AnyRenderableGroup {
         geometryDescriptor.primitiveDataBuffer = renderablesBuffer
         geometryDescriptor.primitiveDataStride = MemoryLayout<Impl>.stride
         geometryDescriptor.primitiveDataElementSize = MemoryLayout<Impl>.size
-        geometryDescriptor.intersectionFunctionTableOffset = Int(Impl.kind.rawValue)
+        geometryDescriptor.intersectionFunctionTableOffset = index
         return geometryDescriptor
     }
 }
 
 struct RenderableGrouper {
-    var groups: [RenderableKind: AnyRenderableGroup] = [:]
+    var groups: [ObjectIdentifier: AnyRenderableGroup] = [:]
 
     mutating func add<R: Renderable>(_ renderable: R, encoder: inout MaterialEncoder) {
         let g = group(for: R.Impl.self)
@@ -116,11 +119,12 @@ struct RenderableGrouper {
     }
 
     private mutating func group<Impl: RenderableImpl>(for type: Impl.Type) -> RenderableGroup<Impl> {
-        if let g = groups[type.kind] {
+        let key = ObjectIdentifier(type)
+        if let g = groups[key] {
             return g as! RenderableGroup<Impl>
         } else {
-            let new = RenderableGroup<Impl>()
-            groups[type.kind] = new
+            let new = RenderableGroup<Impl>(index: groups.count)
+            groups[key] = new
             return new
         }
     }

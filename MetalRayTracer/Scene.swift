@@ -117,5 +117,62 @@ struct Scene {
             ]
         )
     }
+
+    static var pencilInGlass: Scene {
+        let ground = ColoredLambertian(albedo: vector_float3(0.8, 0.8, 0.0))
+        let center = ColoredLambertian(albedo: vector_float3(0.1, 0.2, 0.5))
+//        let left   = Dielectric(refractionIndex: 1.5)
+//        let bubble = Dielectric(refractionIndex: 1/1.5)
+//        let right  = ColoredMetal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 0.2)
+
+        let glass = Subtract(
+            lhs: Cylinder(
+                bottomCenter: vector_float3(0, 0, 0),
+                topCenter: vector_float3(0, 12, 0),
+                radius: 4,
+                material: Dielectric(refractionIndex: 1.5)
+            ),
+            rhs: Cylinder(
+                bottomCenter: vector_float3(0, 1, 0),
+                topCenter: vector_float3(0, 13, 0),
+                radius: 3.5,
+                material: Dielectric(refractionIndex: 1.5)
+            )
+        )
+
+
+        let water = Cylinder(
+            bottomCenter: vector_float3(0, 1.001, 0),
+            topCenter: vector_float3(0, 8, 0),
+            radius: 3.5-0.001,
+            material: Dielectric(refractionIndex: 1.33)
+        )
+
+        let alpha = Float(Double.pi / 6)
+        let p1 = vector_float3(-3.4 * cos(alpha), 1.1, -3.4*sin(alpha))
+        let p2 = vector_float3(0, 12, 3.4)
+        let p3 = p1 + (p2 - p1) * (13.0/11.0)
+
+        let pencil = Cylinder(
+            bottomCenter: p1,
+            topCenter: p3,
+            radius: 0.1,
+            material: center
+        )
+
+        return Scene(
+            camera: CameraConfig(
+                verticalFOV: 60,
+                lookFrom: vector_float3(-15, 14, 0),
+                lookAt: vector_float3(8, 3, 0)
+            ),
+            objects: [
+                Sphere(center: vector_float3(0, -500.5, -1), radius: 500.0, material: ground),
+                glass,
+                water,
+                pencil
+            ]
+        )
+    }
 }
 

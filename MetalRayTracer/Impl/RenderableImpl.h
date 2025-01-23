@@ -249,5 +249,74 @@ public:
     }
 };
 
+template<class LHS, class RHS>
+struct Subtract {
+    LHS lhs;
+    RHS rhs;
+
+    class HitEnumerator;
+};
+
+template<class LHS, class RHS>
+class Subtract<LHS, RHS>::HitEnumerator {
+    typename LHS::HitEnumerator _lhs;
+    typename RHS::HitEnumerator _rhs;
+    int _depth;
+    bool _lhsIsFirst;
+
+    bool chooseChild() {
+        _lhsIsFirst = _lhs.hasNext() && (!_rhs.hasNext() || _lhs.t() < _rhs.t());
+        return _lhsIsFirst;
+    }
+
+    void scanDepth() {
+        bool wasInside = (_depth == 1);
+        while (_lhs.hasNext() || _rhs.hasNext()) {
+            if (chooseChild()) {
+                if (_lhs.isExit()) {
+                    _depth--;
+                } else {
+                    _depth++;
+                }
+                bool isInside = (_depth == 1);
+                if (isInside != wasInside) break;
+                _lhs.move();
+            } else {
+                if (_rhs.isExit()) {
+                    _depth++;
+                } else {
+                    _depth--;
+                }
+                bool isInside = (_depth == 1);
+                if (isInside != wasInside) break;
+                _rhs.move();
+            }
+        }
+    }
+public:
+    HitEnumerator(Subtract<LHS, RHS> subtract, Ray3D ray) : _lhs(subtract.lhs, ray) , _rhs(subtract.rhs, ray)
+    {
+        _depth = 0;
+        scanDepth();
+    }
+
+    bool hasNext() const { return _lhs.hasNext() || _rhs.hasNext(); }
+    void move() {
+        if (_lhsIsFirst) {
+            _lhs.move();
+        } else {
+            _rhs.move();
+        }
+        scanDepth();
+    }
+
+    bool isExit() const { return _lhsIsFirst ? _lhs.isExit() : !_rhs.isExit(); }
+    float t() const { return _lhsIsFirst ? _lhs.t() : _rhs.t(); }
+    float3 point() const { return _lhsIsFirst ? _lhs.point() : _rhs.point(); }
+    float3 normal() const { return _lhsIsFirst ? _lhs.normal() : -_rhs.normal(); }
+    size_t material_offset() const { return _lhsIsFirst ? _lhs.material_offset() : _rhs.material_offset(); }
+    float2 texture_coordinates() const { return _lhsIsFirst ? _lhs.texture_coordinates() : _rhs.texture_coordinates(); }
+};
+
 
 #endif // RENDERABLE_IMPL_H

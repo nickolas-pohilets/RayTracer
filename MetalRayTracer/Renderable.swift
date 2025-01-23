@@ -69,8 +69,6 @@ struct Transform {
     }
 }
 
-extension RenderableKind: Hashable {}
-
 protocol Renderable {
     var boundingBox: MTLAxisAlignedBoundingBox { get }
 
@@ -86,7 +84,6 @@ extension Renderable {
 
 protocol RenderableImpl {
     static var intersectionFunctionName: String { get }
-    static var kind: RenderableKind { get }
 }
 
 extension RenderableImpl {
@@ -95,7 +92,6 @@ extension RenderableImpl {
 
 extension __Sphere: RenderableImpl {
     static var intersectionFunctionName: String { "sphereIntersectionFunction" }
-    static var kind: RenderableKind { .renderable_kind_sphere }
 }
 
 struct Sphere: Renderable {
@@ -133,7 +129,6 @@ struct Sphere: Renderable {
 
 extension __Cylinder: RenderableImpl {
     static var intersectionFunctionName: String { "cylinderIntersectionFunction" }
-    static var kind: RenderableKind { .renderable_kind_cylinder }
 }
 
 struct Cylinder: Renderable {
@@ -160,6 +155,43 @@ struct Cylinder: Renderable {
         self.bottom = material
         self.top = material
         self.side = material
+    }
+
+    init(
+        bottomCenter: vector_float3,
+        topCenter: vector_float3,
+        radius: Float,
+        vRight: vector_float3 = [1, 0, 0],
+        material: any Material
+    ) {
+        self.init(bottomCenter: bottomCenter, topCenter: topCenter, radius: radius, bottom: material, top: material, side: material)
+    }
+
+    init(
+        bottomCenter: vector_float3,
+        topCenter: vector_float3,
+        radius: Float,
+        vRight: vector_float3 = [1, 0, 0],
+        bottom: any Material,
+        top: any Material,
+        side: any Material
+    ) {
+        var v = topCenter - bottomCenter
+        self.height = length(topCenter - bottomCenter)
+        v /= height
+        let w = normalize(cross(vRight, v))
+        let q1 = simd_quatf(from: v, to: vector_float3(0, 1, 0))
+        let w1 = q1.act(w)
+        let q2 = simd_quatf(from: w1, to: vector_float3(0, 0, 1))
+        let q = (q2 * q1).inverse
+        self.transform = Transform(
+            rotation: q,
+            translation: bottomCenter
+        )
+        self.radius = radius
+        self.bottom = bottom
+        self.top = top
+        self.side = side
     }
 
     var boundingBox: MTLAxisAlignedBoundingBox {
@@ -198,6 +230,38 @@ struct Cylinder: Renderable {
     }
 }
 
+struct __SubtractImpl<LHS: RenderableImpl, RHS: RenderableImpl>: RenderableImpl {
+    var lhs: LHS
+    var rhs: RHS
+
+    static var intersectionFunctionName: String {
+        let suffix = "IntersectionFunction"
+        let lhsName = LHS.intersectionFunctionName.removingSuffix(suffix)
+        let rhsName = RHS.intersectionFunctionName.removingSuffix(suffix)
+        return "subtract_\(lhsName)_\(rhsName)_\(suffix)"
+    }
+}
+
+struct Subtract<LHS: Renderable, RHS: Renderable>: Renderable {
+    var lhs: LHS
+    var rhs: RHS
+
+    var boundingBox: MTLAxisAlignedBoundingBox {
+        lhs.boundingBox
+    }
+
+    func visitMaterials(_ reserver: inout MaterialReserver) {
+        lhs.visitMaterials(&reserver)
+        rhs.visitMaterials(&reserver)
+    }
+
+    func asImpl(_ encoder: inout MaterialEncoder) -> __SubtractImpl<LHS.Impl, RHS.Impl> {
+        let lhsImpl = lhs.asImpl(&encoder)
+        let rhsImpl = rhs.asImpl(&encoder)
+        return __SubtractImpl(lhs: lhsImpl, rhs: rhsImpl)
+    }
+}
+
 extension vector_float3 {
     var asPacked: MTLPackedFloat3 {
         return MTLPackedFloat3Make(self.x, self.y, self.z)
@@ -228,5 +292,13 @@ extension MTLAxisAlignedBoundingBox {
     mutating func add(_ point: vector_float3) {
         self.min = simd.min(min.asUnpacked, point).asPacked
         self.max = simd.max(max.asUnpacked, point).asPacked
+    }
+}
+
+extension String {
+    func removingSuffix(_ suffix: String) -> Substring {
+        let range = self.range(of: suffix)!
+        assert(range.upperBound == self.endIndex)
+        return self[..<range.lowerBound]
     }
 }

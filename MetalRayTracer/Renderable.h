@@ -15,11 +15,6 @@ struct Transform {
     vector_float3 translation;
 } __attribute__((swift_private));
 
-enum RenderableKind {
-    renderable_kind_sphere = 1,
-    renderable_kind_cylinder,
-} __attribute__((enum_extensibility(closed)));
-
 struct Sphere {
     struct Transform transform;
     float radius;
