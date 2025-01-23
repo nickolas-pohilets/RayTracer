@@ -9,6 +9,12 @@ import Metal
 struct CameraConfig: Hashable {
     var impl: __CameraConfig
 
+    struct RelativePosition {
+        var yaw: Float
+        var pitch: Float
+        var distance: Float
+    }
+
     init(
         verticalFOV: Float = 90,
         lookFrom: vector_float3 = [0, 0, 0],
@@ -18,7 +24,7 @@ struct CameraConfig: Hashable {
         focusDistance: Float? = nil
     ) {
         impl = .init(
-            vertical_POV: verticalFOV,
+            vertical_FOV: verticalFOV,
             look_from: lookFrom,
             look_at: lookAt,
             up: up,
@@ -27,21 +33,26 @@ struct CameraConfig: Hashable {
         )
     }
 
-    var angles: (yaw: Float, pitch: Float) {
+    var verticalFOV: Float {
+        get { impl.vertical_FOV }
+        set { impl.vertical_FOV = newValue }
+    }
+
+    var relativePosition: RelativePosition {
         get {
             let v = impl.look_from - impl.look_at
+            let d = length(v)
             let yaw = atan2(v.z, v.x) * 180 / .pi
             let pitch = atan2(v.y, sqrt(v.x * v.x + v.z * v.z)) * 180 / .pi
-            return (yaw, pitch)
+            return RelativePosition(yaw: yaw, pitch: pitch, distance: d)
         }
         set {
-            let (yaw, pitch) = newValue
             let d = length(impl.look_from - impl.look_at)
-            let y = sin(pitch * .pi / 180)
-            let h = cos(pitch * .pi / 180)
-            let x = h * cos(yaw * .pi / 180)
-            let z = h * sin(yaw * .pi / 180)
-            let v = vector_float3(x, y, z) * d
+            let y = sin(newValue.pitch * .pi / 180)
+            let h = cos(newValue.pitch * .pi / 180)
+            let x = h * cos(newValue.yaw * .pi / 180)
+            let z = h * sin(newValue.yaw * .pi / 180)
+            let v = vector_float3(x, y, z) * newValue.distance
             impl.look_from = impl.look_at + v
         }
     }
@@ -77,7 +88,7 @@ struct RenderConfig {
 
 extension __CameraConfig: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(vertical_POV)
+        hasher.combine(vertical_FOV)
         hasher.combine(look_from)
         hasher.combine(look_at)
         hasher.combine(defocus_angle)
@@ -85,7 +96,7 @@ extension __CameraConfig: Hashable {
     }
     
     public static func == (lhs: __CameraConfig, rhs: __CameraConfig) -> Bool {
-        return lhs.vertical_POV == rhs.vertical_POV
+        return lhs.vertical_FOV == rhs.vertical_FOV
             && lhs.look_from == rhs.look_from
             && lhs.look_at == rhs.look_at
             && lhs.up == rhs.up

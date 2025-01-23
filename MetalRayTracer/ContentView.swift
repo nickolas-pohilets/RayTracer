@@ -10,10 +10,12 @@ import Metal
 import MetalKit
 
 struct ContentView: View {
+    @State var fov: Float
     // Degrees, [0, 360)
     @State var cameraYaw: Float
     // Degrees, [-90, +90]
     @State var cameraPitch: Float
+    @State var cameraDistance: Float
     @State var focusDistance: Float
     @State var defocusAngle: Float
 
@@ -22,18 +24,23 @@ struct ContentView: View {
     init(scene: Scene) {
         self.initialScene = scene
         let camera = scene.camera
-        let (yaw, pitch) = camera.angles
-        self.cameraYaw = yaw
-        self.cameraPitch = pitch
+        self.fov = camera.verticalFOV
+        let relativePosition = camera.relativePosition
+        self.cameraYaw = relativePosition.yaw
+        self.cameraPitch = relativePosition.pitch
+        self.cameraDistance = relativePosition.distance
         self.focusDistance = camera.focusDistance
         self.defocusAngle = camera.defocusAngle
     }
 
     var currentScene: Scene {
         var scene = initialScene
-        scene.camera.angles = (cameraYaw, cameraPitch)
-        scene.camera.defocusAngle = defocusAngle
-        scene.camera.focusDistance = focusDistance
+        var camera = scene.camera
+        camera.verticalFOV = fov
+        camera.relativePosition = .init(yaw: cameraYaw, pitch: cameraPitch, distance: cameraDistance)
+        camera.defocusAngle = defocusAngle
+        camera.focusDistance = focusDistance
+        scene.camera = camera
         return scene
     }
 
@@ -41,11 +48,17 @@ struct ContentView: View {
         HStack {
             SceneView(scene: currentScene)
             VStack {
+                Text("FOV: \(fov)")
+                Slider(value: $fov, in: 1...180)
+                Divider()
                 Text("Yaw: \(cameraYaw)")
                 Slider(value: $cameraYaw, in: -360...360)
                 Divider()
                 Text("Pitch: \(cameraPitch)")
                 Slider(value: $cameraPitch, in: -90...90)
+                Divider()
+                Text("Distance: \(cameraDistance)")
+                Slider(value: $cameraDistance, in: 0...20)
                 Divider()
                 Text("Focus Distance: \(focusDistance)")
                 Slider(value: $focusDistance, in: 0.1...5)

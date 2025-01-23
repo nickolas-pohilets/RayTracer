@@ -29,7 +29,7 @@ class Camera {
 public:
     Camera(uint image_width, uint image_height, CameraConfig config) {
         image_size = float2(image_width, image_height);
-        float half_pov_radians = config.vertical_POV * M_PI_F / 360;
+        float half_pov_radians = config.vertical_FOV * M_PI_F / 360;
         float viewport_height = 2 * tan(half_pov_radians) * config.focus_distance;
         float viewport_width = viewport_height * float(image_width) / float(image_height);
         camera_center = config.look_from;

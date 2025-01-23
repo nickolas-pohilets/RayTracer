@@ -11,7 +11,7 @@
 #include <simd/simd.h>
 
 struct CameraConfig {
-    float vertical_POV;
+    float vertical_FOV;
     vector_float3 look_from;
     vector_float3 look_at;
     vector_float3 up;
