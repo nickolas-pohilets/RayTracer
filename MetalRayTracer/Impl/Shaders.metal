@@ -133,13 +133,13 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
         color += get_ray_color(ray(r.origin, r.direction), w, materials, &rng, render_config.max_depth);
     }
     color /= render_config.samples_per_pixel;
-    color = min(sqrt(color), 1);
+    color = min(color, 1);
     float3 old_color = (float3(acc_buffer.read(grid_index).rgb) + nextafter(0.5, 0)) / 1024.f;
     float t = 1.f / render_config.pass_counter;
     float3 total_color = old_color * (1 - t) + color * t;
-    color_buffer.write(float4(total_color, 1.0), grid_index);
     ushort3 uint_color = min(ushort3(total_color * 1024), 1023);
     acc_buffer.write(ushort4(uint_color, 0), grid_index);
+    color_buffer.write(float4(sqrt(total_color), 1.0), grid_index);
 }
 
 template<typename T>
