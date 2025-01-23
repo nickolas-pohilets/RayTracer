@@ -10,14 +10,16 @@ struct SceneBuffers {
     let accelerationStructure: any MTLAccelerationStructure
     let intersectionFunctions: [Int: String]
     let materialsBuffer: any MTLBuffer
+    let textureLoader: TextureLoader
 
     init(scene: Scene, device: MTLDevice, commandQueue: MTLCommandQueue) {
         var reserver = MaterialReserver()
         for obj in scene.objects {
             obj.visitMaterials(&reserver)
         }
+        textureLoader = TextureLoader(device: device)
         materialsBuffer = device.makeBuffer(length: reserver.totalSize)!
-        var encoder = MaterialEncoder(availableSize: reserver.totalSize, pointer: materialsBuffer.contents())
+        var encoder = MaterialEncoder(availableSize: reserver.totalSize, pointer: materialsBuffer.contents(), textureLoader: textureLoader)
 
         var grouper = RenderableGrouper()
         for obj in scene.objects {

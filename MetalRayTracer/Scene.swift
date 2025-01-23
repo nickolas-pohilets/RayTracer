@@ -16,10 +16,10 @@ struct Scene {
     }
 
     static var simpleBalls: Scene {
-        let ground = Lambertian(albedo: vector_float3(0.8, 0.8, 0.0));
-        let center = Lambertian(albedo: vector_float3(0.1, 0.2, 0.5));
+        let ground = ColoredLambertian(albedo: vector_float3(0.8, 0.8, 0.0));
+        let center = ColoredLambertian(albedo: vector_float3(0.1, 0.2, 0.5));
         let left   = Dielectric(refractionIndex: 1.50);
-        let right  = Metal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 1.0);
+        let right  = ColoredMetal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 1.0);
         return Scene(
             camera: CameraConfig(),
             objects: [
@@ -32,7 +32,7 @@ struct Scene {
     }
 
     static var singleCylinder: Scene {
-        let ground = Lambertian(albedo: vector_float3(0.5, 0.8, 0.0))
+        let ground = ColoredLambertian(albedo: vector_float3(0.5, 0.8, 0.0))
         return Scene(
             camera: CameraConfig(),
             objects: [
@@ -47,10 +47,10 @@ struct Scene {
     }
 
     static var simpleCylinders: Scene {
-        let ground = Lambertian(albedo: vector_float3(0.8, 0.8, 0.0));
-        let center = Lambertian(albedo: vector_float3(0.1, 0.2, 0.5));
+        let ground = ColoredLambertian(albedo: vector_float3(0.8, 0.8, 0.0));
+        let center = ColoredLambertian(albedo: vector_float3(0.1, 0.2, 0.5));
         let left   = Dielectric(refractionIndex: 1.50);
-        let right  = Metal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 0.1);
+        let right  = ColoredMetal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 0.1);
         return Scene(
             camera: CameraConfig(),
             objects: [
@@ -73,6 +73,47 @@ struct Scene {
                     material: right
                 ),
                 Sphere(center: [0, -100.5, -1], radius: 100, material: ground),
+            ]
+        )
+    }
+
+    static var texturedCylinders: Scene {
+        let ground = ColoredLambertian(albedo: vector_float3(1.8, 1.8, 1.0));
+        let left   = Dielectric(refractionIndex: 1.50);
+        let right  = ColoredMetal(albedo: vector_float3(0.8, 0.6, 0.2), fuzz: 0.1);
+        return Scene(
+            camera: CameraConfig(),
+            objects: [
+                Cylinder(
+                    transform: .translation(-0.5, 0, -1) * .rotation(degrees: 90, axis: .x) * .translation(0, -0.3, 0),
+                    radius: 0.2,
+                    height: 0.6,
+                    material: left
+                ),
+                Cylinder(
+                    transform: .translation(0, -0.2, -1.2),
+                    radius: 0.2,
+                    height: 0.4,
+                    bottom: TexturedLambertian(albedo: ImageTexture(name: "barrel-bottom.jpg")),
+                    top: TexturedLambertian(albedo: ImageTexture(name: "barrel-top.jpg")),
+                    side: TexturedLambertian(albedo: ImageTexture(name: "barrel-side.jpg"))
+                ),
+                Sphere(
+                    center: [0, 0.8, -1.2],
+                    radius: 0.3,
+                    material: TexturedLambertian(albedo: ImageTexture(name: "earthmap.jpg"))
+                ),
+                Cylinder(
+                    transform: .translation(+0.5, 0, -1) * .rotation(degrees: 90, axis: .z) * .translation(0, -0.2, 0),
+                    radius: 0.2,
+                    height: 0.4,
+                    material: right
+                ),
+                Sphere(
+                    center: [0, -100.5, -1],
+                    radius: 100,
+                    material: ground
+                ),
             ]
         )
     }

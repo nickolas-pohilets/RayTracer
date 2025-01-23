@@ -72,7 +72,13 @@ public:
         return _sphere.material_offset;
     }
 
-    //    var textureCoordinates: Point2D
+    float2 texture_coordinates() const {
+        float3 n = transpose(_sphere.transform.rotation) * normal();
+        float2 result;
+        result.x = (atan2(n.z, -n.x) + M_PI_F) / (2 * M_PI_F);
+        result.y = acos(-n.y) / M_PI_F;
+        return result;
+    }
 };
 
 class Cylinder::HitEnumerator {
@@ -80,6 +86,7 @@ class Cylinder::HitEnumerator {
         float t;
         float3 normal;
         size_t material_offset;
+        float2 texture_coordinates;
     };
 
     Cylinder _cylinder;
@@ -87,7 +94,7 @@ class Cylinder::HitEnumerator {
     Hit _hit[2];
     int _index;
 
-    static void hitPlane(Cylinder cylinder, Ray3D local_ray, thread Hit & planeIn, thread Hit & planeOut) {
+    static void hit_plane(Cylinder cylinder, Ray3D local_ray, thread Hit & planeIn, thread Hit & planeOut) {
         float denom = local_ray.direction.y; // dot((0,1,0),_local_ray.direction);
         float tb, tt;
         bool has_solutions;
@@ -101,10 +108,12 @@ class Cylinder::HitEnumerator {
             planeIn.t = tb;
             planeIn.normal = -cylinder.transform.rotation.columns[1];
             planeIn.material_offset = cylinder.bottom_material_offset;
+            planeIn.texture_coordinates = plane_texture_coordinates(local_ray.at(tb), cylinder.radius, -1);
 
             planeOut.t = tt;
             planeOut.normal = +cylinder.transform.rotation.columns[1];
             planeOut.material_offset = cylinder.top_material_offset;
+            planeOut.texture_coordinates = plane_texture_coordinates(local_ray.at(tt), cylinder.radius, +1);
 
             if (planeIn.t > planeOut.t) {
                 Hit tmp = planeIn;
@@ -124,7 +133,14 @@ class Cylinder::HitEnumerator {
         }
     }
 
-    static void hitTube(Cylinder cylinder, Ray3D local_ray, thread Hit & tubeIn, thread Hit & tubeOut) {
+    static float2 plane_texture_coordinates(float3 local_point, float radius, float flipX) {
+        float2 result;
+        result.x = 0.5 + local_point.z * flipX / (2 * radius);
+        result.y = 0.5 + local_point.x / (2 * radius);
+        return result;
+    }
+
+    static void hit_tube(Cylinder cylinder, Ray3D local_ray, thread Hit & tubeIn, thread Hit & tubeOut) {
         // let ob = ray.origin - .zero
         // let ot = ray.origin - (0, height, 0)
         // let d = ray.direction
@@ -160,10 +176,12 @@ class Cylinder::HitEnumerator {
             tubeIn.t = t1;
             tubeIn.normal = cylinder.transform.rotation * ((float3){lp1.x, 0, lp1.z} / cylinder.radius);
             tubeIn.material_offset = cylinder.side_material_offset;
+            tubeIn.texture_coordinates = tube_texture_coordinates(lp1, cylinder.height);
 
             tubeOut.t = t2;
             tubeOut.normal = cylinder.transform.rotation * ((float3){lp2.x, 0, lp2.z} / cylinder.radius);
             tubeOut.material_offset = cylinder.side_material_offset;
+            tubeOut.texture_coordinates = tube_texture_coordinates(lp2, cylinder.height);
         } else {
             if (length_squared(local_ray.origin.xz) > cylinder.radius * cylinder.radius) {
                 // Ray is outside of the side tube
@@ -176,6 +194,13 @@ class Cylinder::HitEnumerator {
             }
         }
     }
+
+    static float2 tube_texture_coordinates(float3 local_point, float height) {
+        float2 result;
+        result.x = (atan2(local_point.z, -local_point.x) + M_PI_F) / (2 * M_PI_F);
+        result.y = local_point.y / height;
+        return result;
+    }
 public:
     HitEnumerator(Cylinder cylinder, Ray3D ray)
         : _cylinder(cylinder), _ray(ray)
@@ -183,11 +208,11 @@ public:
         Ray3D local_ray = inverse_transform(ray, cylinder.transform);
 
         Hit planeIn, planeOut;
-        hitPlane(cylinder, local_ray, planeIn, planeOut);
+        hit_plane(cylinder, local_ray, planeIn, planeOut);
 
         // Hit testing side tube
         Hit tubeIn, tubeOut;
-        hitTube(cylinder, local_ray, tubeIn, tubeOut);
+        hit_tube(cylinder, local_ray, tubeIn, tubeOut);
 
         _hit[0] = planeIn.t > tubeIn.t ? planeIn : tubeIn;
         _hit[1] = planeOut.t < tubeOut.t ? planeOut : tubeOut;
@@ -209,11 +234,18 @@ public:
     }
 
     float3 normal() const {
+        assert(hasNext());
         return _hit[_index].normal;
     }
 
     size_t material_offset() const {
+        assert(hasNext());
         return _hit[_index].material_offset;
+    }
+
+    float2 texture_coordinates() const {
+        assert(hasNext());
+        return _hit[_index].texture_coordinates;
     }
 };
 

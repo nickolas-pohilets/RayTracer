@@ -159,6 +159,7 @@ BoundingBoxResult intersection(float3 origin,
             payload.point = e.point();
             payload.set_normal(e.normal(), direction);
             payload.material_offset = e.material_offset();
+            payload.texture_coordinates = e.texture_coordinates();
             return { true, distance };
         }
     }

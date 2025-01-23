@@ -11,6 +11,7 @@
 
 #include <simd/simd.h>
 #include <cassert>
+#include <numbers>
 
 #define device
 #define constant
@@ -28,6 +29,10 @@ using namespace simd;
 inline bool isfinite(float x) {
     return std::isfinite(x);
 }
+
+#ifndef M_PI_F
+#define M_PI_F std::numbers::pi_v<float>
+#endif
 
 #else
 

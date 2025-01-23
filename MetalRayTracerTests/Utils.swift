@@ -12,8 +12,30 @@ extension BinaryFloatingPoint {
     }
 }
 
-func XCTAssertAlmostEqualVectors(_ a: SIMD3<Float>, _ b: SIMD3<Float>, accuracy: Float = .defaultTestAccuracy, message: String = "", file: StaticString = #filePath, line: UInt = #line) {
-    let delta = reduce_max(abs(a - b))
+protocol _Dist: SIMD {
+    static func chebyshevDistance(_ a: Self, _ b: Self) -> Scalar
+}
+
+extension SIMD2<Float>: _Dist {
+    static func chebyshevDistance(_ a: Self, _ b: Self) -> Float {
+        return reduce_max(abs(a - b))
+    }
+}
+
+extension SIMD3<Float>: _Dist {
+    static func chebyshevDistance(_ a: Self, _ b: Self) -> Float {
+        return reduce_max(abs(a - b))
+    }
+}
+
+extension SIMD4<Float>: _Dist {
+    static func chebyshevDistance(_ a: Self, _ b: Self) -> Float {
+        return reduce_max(abs(a - b))
+    }
+}
+
+func XCTAssertAlmostEqualVectors<V: _Dist>(_ a: V, _ b: V, accuracy: Float = .defaultTestAccuracy, message: String = "", file: StaticString = #filePath, line: UInt = #line) where V.Scalar == Float {
+    let delta = V.chebyshevDistance(a, b)
     XCTAssertEqual(delta, 0, accuracy: accuracy, "Bla-bla-bla")
     if delta > accuracy {
         var msg = "XCTAssertAlmostEqualVectors failed: (\"\(a.description)\") is not equal to (\"\(b.description)\") +/- (\"\(accuracy)\")"

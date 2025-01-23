@@ -11,7 +11,7 @@ import SwiftUI
 struct MetalRayTracerApp: App {
     var body: some SwiftUI.Scene {
         WindowGroup {
-            ContentView(scene: .simpleCylinders)
+            ContentView(scene: .texturedCylinders)
         }
     }
 }

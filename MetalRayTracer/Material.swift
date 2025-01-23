@@ -7,13 +7,14 @@
 
 public protocol Material {
     associatedtype Impl
-    var asImpl: Impl { get }
+    func asImpl(_ encoder: inout MaterialEncoder) -> Impl
 }
 
 extension Material {
     var size: Int { MemoryLayout<Impl>.stride }
     func encode(to encoder: inout MaterialEncoder) {
-        encoder.write(asImpl)
+        let impl = asImpl(&encoder)
+        encoder.write(impl)
     }
 }
 
@@ -33,11 +34,13 @@ public struct MaterialEncoder {
     private var availableSize: Int
     private var pointer: UnsafeMutableRawPointer
     private var offset: Int
+    let textureLoader: TextureLoader
 
-    init(availableSize: Int, pointer: UnsafeMutableRawPointer) {
+    init(availableSize: Int, pointer: UnsafeMutableRawPointer, textureLoader: TextureLoader) {
         self.availableSize = availableSize
         self.pointer = pointer
         self.offset = 0
+        self.textureLoader = textureLoader
     }
 
     mutating func encode(_ material: some Material) -> Int {
@@ -58,19 +61,33 @@ public struct MaterialEncoder {
     }
 }
 
-public struct Lambertian: Material {
+public struct ColoredLambertian: Material {
     public var albedo: vector_float3
 
     public init(albedo: vector_float3) {
         self.albedo = albedo
     }
 
-    public var asImpl: __LambertianMaterial {
-        __LambertianMaterial(kind: .material_kind_lambertian, albedo: albedo)
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __ColoredLambertianMaterial {
+        __ColoredLambertianMaterial(kind: .material_kind_lambertian_colored, albedo: albedo)
     }
 }
 
-public struct Metal: Material {
+public struct TexturedLambertian: Material {
+    public var albedo: ImageTexture
+
+    public init(albedo: ImageTexture) {
+        self.albedo = albedo
+    }
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __TexturedLambertianMaterial {
+        let metalTexture = encoder.textureLoader.load(albedo)
+        let texture = __ImageTexture(texture_ptr: metalTexture.gpuResourceID)
+        return __TexturedLambertianMaterial(kind: .material_kind_lambertian_textured, albedo: texture)
+    }
+}
+
+public struct ColoredMetal: Material {
     public var albedo: vector_float3
     public var fuzz: Float
 
@@ -80,8 +97,8 @@ public struct Metal: Material {
         self.fuzz = fuzz
     }
 
-    public var asImpl: __MetalMaterial {
-        __MetalMaterial(kind: .material_kind_metal, albedo: albedo, fuzz: fuzz)
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __ColoredMetalMaterial {
+        __ColoredMetalMaterial(kind: .material_kind_metal_colored, albedo: albedo, fuzz: fuzz)
     }
 }
 
@@ -93,7 +110,7 @@ public struct Dielectric: Material {
         self.refractionIndex = refractionIndex
     }
 
-    public var asImpl: __DielectricMaterial {
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __DielectricMaterial {
         __DielectricMaterial(kind: .material_kind_dielectric, refraction_index: refractionIndex)
     }
 }

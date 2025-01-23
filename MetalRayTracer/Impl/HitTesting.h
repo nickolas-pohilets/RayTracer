@@ -19,6 +19,7 @@ struct Payload {
     float3 normal;
     face face;
     size_t material_offset;
+    float2 texture_coordinates;
 
     void set_normal(float3 front_normal, float3 ray_direction) ray_data {
         if (dot(front_normal, ray_direction) > 0) {

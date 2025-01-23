@@ -9,20 +9,47 @@
 
 #include <simd/simd.h>
 
+#ifndef __METAL__
+#include <Metal/Metal.h>
+#endif
+
 enum MaterialKind {
-    material_kind_lambertian = 1,
-    material_kind_metal,
+    material_kind_lambertian_colored = 1,
+    material_kind_lambertian_textured,
+    material_kind_metal_colored,
+    material_kind_metal_textured,
     material_kind_dielectric
 } __attribute__((enum_extensibility(closed)));
 
-struct LambertianMaterial {
-    enum MaterialKind kind;
-    vector_float3 albedo;
+typedef vector_float3 SolidColor;
+
+struct ImageTexture {
+#ifdef __METAL__
+    metal::texture2d<float> texture;
+#else
+    MTLResourceID texture_ptr;
+#endif
 } __attribute__((swift_private));
 
-struct MetalMaterial {
+struct ColoredLambertianMaterial {
     enum MaterialKind kind;
-    vector_float3 albedo;
+    SolidColor albedo;
+} __attribute__((swift_private));
+
+struct TexturedLambertianMaterial {
+    enum MaterialKind kind;
+    struct ImageTexture albedo;
+} __attribute__((swift_private));
+
+struct ColoredMetalMaterial {
+    enum MaterialKind kind;
+    SolidColor albedo;
+    float fuzz;
+} __attribute__((swift_private));
+
+struct TexturedMetalMaterial {
+    enum MaterialKind kind;
+    SolidColor albedo;
     float fuzz;
 } __attribute__((swift_private));
 

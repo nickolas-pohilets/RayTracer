@@ -190,6 +190,10 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: Int(kernel_buffers.function_table.rawValue))
         renderEncoder.setBuffer(sceneBuffers.materialsBuffer, offset: 0, index: Int(kernel_buffers.materials.rawValue))
 
+        for texture in sceneBuffers.textureLoader.textures.values {
+            renderEncoder.useResource(texture, usage: .read)
+        }
+
         let threadGroupWidth = pipeline.threadExecutionWidth
         let threadGroupHeight = pipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth
         let threadGroupSize = MTLSize(width: threadGroupWidth, height: threadGroupHeight, depth: 1)
