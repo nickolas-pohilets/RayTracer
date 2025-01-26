@@ -392,75 +392,6 @@ public:
     }
 };
 
-template<class LHS, class RHS>
-struct Subtract {
-    LHS lhs;
-    RHS rhs;
-
-    class HitEnumerator;
-};
-
-template<class LHS, class RHS>
-class Subtract<LHS, RHS>::HitEnumerator {
-    typename LHS::HitEnumerator _lhs;
-    typename RHS::HitEnumerator _rhs;
-    int _depth;
-    bool _lhsIsFirst;
-
-    bool chooseChild() {
-        _lhsIsFirst = _lhs.hasNext() && (!_rhs.hasNext() || _lhs.t() < _rhs.t());
-        return _lhsIsFirst;
-    }
-
-    void scanDepth() {
-        bool wasInside = (_depth == 1);
-        while (_lhs.hasNext() || _rhs.hasNext()) {
-            if (chooseChild()) {
-                if (_lhs.isExit()) {
-                    _depth--;
-                } else {
-                    _depth++;
-                }
-                bool isInside = (_depth == 1);
-                if (isInside != wasInside) break;
-                _lhs.move();
-            } else {
-                if (_rhs.isExit()) {
-                    _depth++;
-                } else {
-                    _depth--;
-                }
-                bool isInside = (_depth == 1);
-                if (isInside != wasInside) break;
-                _rhs.move();
-            }
-        }
-    }
-public:
-    HitEnumerator(Subtract<LHS, RHS> subtract, Ray3D ray) : _lhs(subtract.lhs, ray) , _rhs(subtract.rhs, ray)
-    {
-        _depth = 0;
-        scanDepth();
-    }
-
-    bool hasNext() const { return _lhs.hasNext() || _rhs.hasNext(); }
-    void move() {
-        if (_lhsIsFirst) {
-            _lhs.move();
-        } else {
-            _rhs.move();
-        }
-        scanDepth();
-    }
-
-    bool isExit() const { return _lhsIsFirst ? _lhs.isExit() : !_rhs.isExit(); }
-    float t() const { return _lhsIsFirst ? _lhs.t() : _rhs.t(); }
-    float3 point() const { return _lhsIsFirst ? _lhs.point() : _rhs.point(); }
-    float3 normal() const { return _lhsIsFirst ? _lhs.normal() : -_rhs.normal(); }
-    size_t material_offset() const { return _lhsIsFirst ? _lhs.material_offset() : _rhs.material_offset(); }
-    float2 texture_coordinates() const { return _lhsIsFirst ? _lhs.texture_coordinates() : _rhs.texture_coordinates(); }
-};
-
 template<class... T> struct tuple;
 template<> struct tuple <> {
     enum { size = 0 };
@@ -498,7 +429,7 @@ template<class H, class M, class... T> struct tuple<H, M, T...> {
     tuple(F f, thread tuple<H2, T2...> const & other): head(f(other.head)), tail(f, other.tail) {}
 };
 
-template<int min_count, class... T>
+template<int min_count, bool subtract, class... T>
 struct Composition {
     tuple<T...> _items;
 
@@ -508,10 +439,14 @@ struct Composition {
 };
 
 template<class... T>
-using Union = Composition<1, T...>;
+using Union = Composition<1, false, T...>;
 
 template<class... T>
-using Intersection = Composition<tuple<T...>::size, T...>;
+using Intersection = Composition<tuple<T...>::size, false, T...>;
+
+template<class... T>
+using Subtract = Composition<1, true, T...>;
+
 
 namespace composition_impl {
 
@@ -646,8 +581,8 @@ struct GetHitEnumerator {
 
 } // namespace composition_impl
 
-template<int min_count, class... T>
-class Composition<min_count, T...>::HitEnumerator {
+template<int min_count, bool subtract, class... T>
+class Composition<min_count, subtract, T...>::HitEnumerator {
     tuple<typename T::HitEnumerator...> _children;
     int _depth;
     composition_impl::NearestChild _currentChild;
@@ -670,7 +605,7 @@ class Composition<min_count, T...>::HitEnumerator {
         bool wasInside = (_depth >= min_count);
         while (composition_impl::anyHasNext(_children)) {
             chooseChild();
-            if (withSelectedChild(composition_impl::IsExit())) {
+            if (withSelectedChild(composition_impl::IsExit()) != (subtract && _currentChild.index > 0)) {
                 _depth--;
             } else {
                 _depth++;
@@ -680,8 +615,12 @@ class Composition<min_count, T...>::HitEnumerator {
             withSelectedChild(composition_impl::Move());
         }
     }
+
+    bool shouldSwap() const {
+        return subtract && _currentChild.index > 0;
+    }
 public:
-    HitEnumerator(Composition<min_count, T...> object, Ray3D ray) : _children(composition_impl::GetHitEnumerator(ray), object._items)
+    HitEnumerator(Composition<min_count, subtract, T...> object, Ray3D ray) : _children(composition_impl::GetHitEnumerator(ray), object._items)
     {
         _depth = 0;
         scanDepth();
@@ -693,10 +632,10 @@ public:
         scanDepth();
     }
 
-    bool isExit() const { return withSelectedChild(composition_impl::IsExit()); }
+    bool isExit() const { return withSelectedChild(composition_impl::IsExit()) != shouldSwap(); }
     float t() const { return withSelectedChild(composition_impl::GetT()); }
     float3 point() const { return withSelectedChild(composition_impl::GetPoint()); }
-    float3 normal() const { return withSelectedChild(composition_impl::GetNormal()); }
+    float3 normal() const { return withSelectedChild(composition_impl::GetNormal()) * (shouldSwap() ? -1 : +1); }
     size_t material_offset() const { return withSelectedChild(composition_impl::GetMaterial()); }
     float2 texture_coordinates() const { return withSelectedChild(composition_impl::GetTextureCoordinates()); }
 };
