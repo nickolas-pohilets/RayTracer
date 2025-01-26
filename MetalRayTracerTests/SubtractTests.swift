@@ -136,4 +136,40 @@ class SubtractTests: XCTestCase {
         let e = CylinderDiff.HitEnumerator(sut, Ray3D(float3(0, 5, -5), float3(0, 0, 1)))
         XCTAssertFalse(e.hasNext())
     }
+
+    func testCombo() {
+        let box = __Cuboid(
+            transform: __Transform(
+                rotation: matrix_identity_float3x3,
+                translation: float3(-1, -1, -1)
+            ),
+            size: float3(2, 2, 2),
+            material_offset: (11, 12, 13, 14, 15, 16)
+        )
+        let sphere = __Sphere(
+            transform: __Transform(
+                rotation: matrix_identity_float3x3,
+                translation: .zero
+            ),
+            radius: 1.2,
+            material_offset: 21
+        )
+        let cyl = __Cylinder(
+            transform: __Transform(
+                rotation: matrix_identity_float3x3,
+                translation: float3(0, -2, 0)
+            ),
+            radius: 0.5,
+            height: 4,
+            bottom_material_offset: 31,
+            top_material_offset: 32,
+            side_material_offset: 33
+        )
+        print(MemoryLayout<Combo>.size)
+        print(MemoryLayout<Combo>.stride)
+        print(MemoryLayout<Combo>.alignment)
+        let sut = Combo(box, sphere, cyl)
+        let e = Combo.HitEnumerator(sut, Ray3D(float3(0, 5, 0), float3(0, -1, 0)))
+        XCTAssertFalse(e.hasNext())
+    }
 }

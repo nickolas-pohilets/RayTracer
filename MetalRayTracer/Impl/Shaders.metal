@@ -190,6 +190,18 @@ BoundingBoxResult cylinderIntersectionFunction(float3 origin [[origin]],
 }
 
 [[intersection(bounding_box)]]
+BoundingBoxResult cuboidIntersectionFunction(float3 origin [[origin]],
+                                             float3 direction [[direction]],
+                                             float minDistance [[min_distance]],
+                                             float maxDistance [[max_distance]],
+                                             uint primitiveIndex [[primitive_id]],
+                                             device Cuboid const *object [[primitive_data]],
+                                             ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
 BoundingBoxResult subtract_cylinder_cylinder_IntersectionFunction(float3 origin [[origin]],
                                                                   float3 direction [[direction]],
                                                                   float minDistance [[min_distance]],
@@ -197,6 +209,81 @@ BoundingBoxResult subtract_cylinder_cylinder_IntersectionFunction(float3 origin 
                                                                   uint primitiveIndex [[primitive_id]],
                                                                   device Subtract<Cylinder, Cylinder> const *object [[primitive_data]],
                                                                   ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult subtract_cuboid_cylinder_IntersectionFunction(float3 origin [[origin]],
+                                                                float3 direction [[direction]],
+                                                                float minDistance [[min_distance]],
+                                                                float maxDistance [[max_distance]],
+                                                                uint primitiveIndex [[primitive_id]],
+                                                                device Subtract<Cuboid, Cylinder> const *object [[primitive_data]],
+                                                                ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult intersection2_cuboid_sphere_IntersectionFunction(float3 origin [[origin]],
+                                                                   float3 direction [[direction]],
+                                                                   float minDistance [[min_distance]],
+                                                                   float maxDistance [[max_distance]],
+                                                                   uint primitiveIndex [[primitive_id]],
+                                                                   device Intersection<Cuboid, Sphere> const *object [[primitive_data]],
+                                                                   ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult union3_cylinder_cylinder_cylinder_IntersectionFunction(float3 origin [[origin]],
+                                                                  float3 direction [[direction]],
+                                                                  float minDistance [[min_distance]],
+                                                                  float maxDistance [[max_distance]],
+                                                                  uint primitiveIndex [[primitive_id]],
+                                                                  device Union<Cylinder, Cylinder, Cylinder> const *object [[primitive_data]],
+                                                                  ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult subtract_cuboid_union3_cylinder_cylinder_cylinder__IntersectionFunction(
+    float3 origin [[origin]],
+    float3 direction [[direction]],
+    float minDistance [[min_distance]],
+    float maxDistance [[max_distance]],
+    uint primitiveIndex [[primitive_id]],
+    device Subtract<Cuboid, Union<Cylinder, Cylinder, Cylinder>> const *object [[primitive_data]],
+    ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult subtract_intersection2_cuboid_sphere__cylinder_IntersectionFunction(
+    float3 origin [[origin]],
+    float3 direction [[direction]],
+    float minDistance [[min_distance]],
+    float maxDistance [[max_distance]],
+    uint primitiveIndex [[primitive_id]],
+    device Subtract<Intersection<Cuboid, Sphere>, Cylinder> const *object [[primitive_data]],
+    ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult subtract_intersection2_cuboid_sphere__union3_cylinder_cylinder_cylinder__IntersectionFunction(
+    float3 origin [[origin]],
+    float3 direction [[direction]],
+    float minDistance [[min_distance]],
+    float maxDistance [[max_distance]],
+    uint primitiveIndex [[primitive_id]],
+    device Subtract<Intersection<Cuboid, Sphere>, Union<Cylinder, Cylinder, Cylinder>> const *object [[primitive_data]],
+    ray_data Payload & payload [[payload]])
 {
     return intersection(origin, direction, minDistance, maxDistance, *object, payload);
 }

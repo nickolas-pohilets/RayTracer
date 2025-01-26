@@ -22,6 +22,11 @@ inline Ray3D transform(Ray3D r, Transform t) {
     return Ray3D(t.rotation * r.origin + t.translation, t.rotation * r.direction);
 }
 
+inline float3 inverse_transform_point(float3 p, Transform t) {
+    matrix_float3x3 rInv = transpose(t.rotation);
+    return rInv * (p - t.translation);
+}
+
 class Sphere::HitEnumerator {
     Sphere _sphere;
     Ray3D _ray;
@@ -249,6 +254,144 @@ public:
     }
 };
 
+class Cuboid::HitEnumerator {
+    struct Hit {
+        float t;
+        float3 normal;
+        Face face;
+    };
+
+    Cuboid _cuboid;
+    Ray3D _ray;
+    Hit _hit[2];
+    int _index;
+
+    static void hit_plane(float size,
+                          float origin, float direction,
+                          float3 top_normal, int axis,
+                          thread Hit & planeIn, thread Hit & planeOut)
+    {
+        float denom = direction; // dot((0,1,0),_local_ray.direction);
+        float tb, tt;
+        bool has_solutions;
+        {
+#pragma METAL fp math_mode(safe)
+            tb = -origin / denom;
+            tt = (size - origin) / denom;
+            has_solutions = isfinite(tb) && isfinite(tt);
+        }
+        if (has_solutions) {
+            planeIn.t = tb;
+            planeIn.normal = -top_normal;
+            planeIn.face = (Face)(2*axis);
+
+            planeOut.t = tt;
+            planeOut.normal = +top_normal;
+            planeOut.face = (Face)(2*axis + 1);
+
+            if (planeIn.t > planeOut.t) {
+                Hit tmp = planeIn;
+                planeIn = planeOut;
+                planeOut = tmp;
+            }
+        } else {
+            if (origin >= 0 && origin < size) {
+                // Not constrained by the planes
+                planeIn.t = -INFINITY;
+                planeOut.t = +INFINITY;
+            } else {
+                // Out of planes
+                planeIn.t = +INFINITY;
+                planeOut.t = -INFINITY;
+            }
+        }
+    }
+
+    static float2 plane_texture_coordinates(float3 local_point, float radius, float flipX) {
+        float2 result;
+        result.x = 0.5 + local_point.z * flipX / (2 * radius);
+        result.y = 0.5 + local_point.x / (2 * radius);
+        return result;
+    }
+public:
+    HitEnumerator(Cuboid cuboid, Ray3D ray)
+        : _cuboid(cuboid), _ray(ray)
+    {
+        Ray3D local_ray = inverse_transform(ray, cuboid.transform);
+
+        Hit xIn, xOut;
+        hit_plane(cuboid.size.x, local_ray.origin.x, local_ray.direction.x, cuboid.transform.rotation.columns[0], 0, xIn, xOut);
+
+        Hit yIn, yOut;
+        hit_plane(cuboid.size.y, local_ray.origin.y, local_ray.direction.y, cuboid.transform.rotation.columns[1], 1, yIn, yOut);
+
+        Hit zIn, zOut;
+        hit_plane(cuboid.size.z, local_ray.origin.z, local_ray.direction.z, cuboid.transform.rotation.columns[2], 2, zIn, zOut);
+
+        _hit[0] = xIn.t > yIn.t ? (xIn.t > zIn.t ? xIn : zIn) : (yIn.t > zIn.t ? yIn : zIn);
+        _hit[1] = xOut.t < yOut.t ? (xOut.t < zOut.t ? xOut : zOut) : (yOut.t < zOut.t ? yOut : zOut);
+        _index = _hit[0].t <= _hit[1].t ? 0 : 2;
+    }
+
+    bool hasNext() const { return _index < 2; }
+    void move() { _index++; }
+
+    bool isExit() const { return _index == 1; }
+
+    float t() const {
+        assert(hasNext());
+        return _hit[_index].t;
+    }
+
+    float3 point() const {
+        return _ray.at(t());
+    }
+
+    float3 normal() const {
+        assert(hasNext());
+        return _hit[_index].normal;
+    }
+
+    size_t material_offset() const {
+        assert(hasNext());
+        return _cuboid.material_offset[_hit[_index].face];
+    }
+
+    float2 texture_coordinates() const {
+        float3 p = point();
+        float3 local_p = inverse_transform_point(p, _cuboid.transform) / _cuboid.size;
+        Face face = _hit[_index].face;
+        float2 result;
+        switch (face) {
+        case left:
+            result.x = 1 - local_p.z;
+            result.y = local_p.y;
+            break;
+        case front:
+            result.x = local_p.x;
+            result.y = local_p.y;
+            break;
+        case right:
+            result.x = local_p.z;
+            result.y = local_p.y;
+            break;
+        case back:
+            result.x = 1 - local_p.x;
+            result.y = local_p.y;
+            break;
+        case top:
+            result.x = local_p.x;
+            result.y = local_p.z;
+            break;
+        case bottom:
+            result.x = local_p.x;
+            result.y = 1 - local_p.z;
+            break;
+        }
+        return result;
+    }
+};
+
 template<class LHS, class RHS>
 struct Subtract {
     LHS lhs;
@@ -316,6 +459,246 @@ public:
     float3 normal() const { return _lhsIsFirst ? _lhs.normal() : -_rhs.normal(); }
     size_t material_offset() const { return _lhsIsFirst ? _lhs.material_offset() : _rhs.material_offset(); }
     float2 texture_coordinates() const { return _lhsIsFirst ? _lhs.texture_coordinates() : _rhs.texture_coordinates(); }
+};
+
+template<class... T> struct tuple;
+template<> struct tuple <> {
+    enum { size = 0 };
+
+    tuple() {};
+
+    template<class F>
+    tuple(F f, thread tuple<> const & other) {}
+};
+
+template<class H> struct tuple<H> {
+    enum { size = 1 };
+
+    H head;
+
+    tuple<> get_tail() const { return tuple<>(); }
+
+    tuple(H h): head(h) {}
+
+    template<class F, class H2>
+    tuple(F f, thread tuple<H2> const & other): head(f(other.head)) {}
+};
+
+template<class H, class M, class... T> struct tuple<H, M, T...> {
+    enum { size = 1 + tuple<M, T...>::size };
+    H head;
+    tuple<M, T...> tail;
+
+    tuple(H h, M m, T... t): head(h), tail(m, t...) {}
+
+    thread tuple<M, T...> & get_tail() { return tail; }
+    thread tuple<M, T...> const & get_tail() const { return tail; }
+
+    template<class F, class H2, class...T2>
+    tuple(F f, thread tuple<H2, T2...> const & other): head(f(other.head)), tail(f, other.tail) {}
+};
+
+template<int min_count, class... T>
+struct Composition {
+    tuple<T...> _items;
+
+    Composition(T... items): _items(items...) {}
+
+    class HitEnumerator;
+};
+
+template<class... T>
+using Union = Composition<1, T...>;
+
+template<class... T>
+using Intersection = Composition<tuple<T...>::size, T...>;
+
+namespace composition_impl {
+
+struct NearestChild {
+    size_t index;
+    float best_t;
+};
+
+template<class H, class... T>
+void getNearestChild(size_t index, thread NearestChild & ctx, thread tuple<H, T...> const & children) {
+    getNearestChild(index + 1, ctx, children.get_tail());
+
+    if (children.head.hasNext()) {
+        float t = children.head.t();
+        if (t < ctx.best_t) {
+            ctx.index = index;
+            ctx.best_t = t;
+        }
+    }
+}
+
+void getNearestChild(size_t index, thread NearestChild & ctx, thread tuple<> const &) {
+    ctx.index = (size_t)(ptrdiff_t)-1;
+    ctx.best_t = +INFINITY;
+}
+
+bool anyHasNext(thread tuple<> const & children) {
+    return false;
+}
+
+template<class H, class... T>
+bool anyHasNext(thread tuple<H, T...> const & children) {
+    if (children.head.hasNext()) { return true; }
+    return anyHasNext(children.get_tail());
+}
+
+template<class F, class H, class... T>
+typename F::result withSelectedChild(F f, size_t selected_index, size_t current_index, thread tuple<H, T...> & children) {
+    if (selected_index == current_index) {
+        return f(children.head);
+    }
+    return withSelectedChild<F, T...>(f, selected_index, current_index + 1, children.get_tail());
+}
+
+template<class F, class H, class... T>
+typename F::result withSelectedChild(F f, size_t selected_index, size_t current_index, thread tuple<H, T...> const & children) {
+    if (selected_index == current_index) {
+        return f(children.head);
+    }
+    return withSelectedChild<F, T...>(f, selected_index, current_index + 1, children.get_tail());
+}
+
+template<class F>
+typename F::result withSelectedChild(F f, size_t selected_index, size_t current_index, thread tuple<> const & children) {
+    assert(false);
+    return typename F::result();
+}
+
+struct Move {
+    typedef void result;
+
+    template<class E>
+    result operator()(thread E & e) const {
+        e.move();
+    }
+};
+
+struct IsExit {
+    typedef bool result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.isExit();
+    }
+};
+
+struct GetT {
+    typedef float result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.t();
+    }
+};
+
+struct GetPoint {
+    typedef float3 result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.point();
+    }
+};
+
+struct GetNormal {
+    typedef float3 result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.normal();
+    }
+};
+
+struct GetMaterial {
+    typedef size_t result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.material_offset();
+    }
+};
+
+struct GetTextureCoordinates {
+    typedef float2 result;
+
+    template<class E>
+    result operator()(thread E const & e) const {
+        return e.texture_coordinates();
+    }
+};
+
+struct GetHitEnumerator {
+    Ray3D _ray;
+
+    explicit GetHitEnumerator(Ray3D ray): _ray(ray) {}
+
+    template<class T>
+    typename T::HitEnumerator operator()(thread T const & object) {
+        return typename T::HitEnumerator(object, _ray);
+    }
+};
+
+} // namespace composition_impl
+
+template<int min_count, class... T>
+class Composition<min_count, T...>::HitEnumerator {
+    tuple<typename T::HitEnumerator...> _children;
+    int _depth;
+    composition_impl::NearestChild _currentChild;
+
+    void chooseChild() {
+        composition_impl::getNearestChild(0, _currentChild, _children);
+    }
+
+    template<class F>
+    typename F::result withSelectedChild(F f) {
+        return composition_impl::withSelectedChild(f, _currentChild.index, 0, _children);
+    }
+
+    template<class F>
+    typename F::result withSelectedChild(F f) const {
+        return composition_impl::withSelectedChild(f, _currentChild.index, 0, _children);
+    }
+
+    void scanDepth() {
+        bool wasInside = (_depth >= min_count);
+        while (composition_impl::anyHasNext(_children)) {
+            chooseChild();
+            if (withSelectedChild(composition_impl::IsExit())) {
+                _depth--;
+            } else {
+                _depth++;
+            }
+            bool isInside = (_depth >= min_count);
+            if (isInside != wasInside) break;
+            withSelectedChild(composition_impl::Move());
+        }
+    }
+public:
+    HitEnumerator(Composition<min_count, T...> object, Ray3D ray) : _children(composition_impl::GetHitEnumerator(ray), object._items)
+    {
+        _depth = 0;
+        scanDepth();
+    }
+
+    bool hasNext() const { return composition_impl::anyHasNext(_children); }
+    void move() {
+        withSelectedChild(composition_impl::Move());
+        scanDepth();
+    }
+
+    bool isExit() const { return withSelectedChild(composition_impl::IsExit()); }
+    float t() const { return withSelectedChild(composition_impl::GetT()); }
+    float3 point() const { return withSelectedChild(composition_impl::GetPoint()); }
+    float3 normal() const { return withSelectedChild(composition_impl::GetNormal()); }
+    size_t material_offset() const { return withSelectedChild(composition_impl::GetMaterial()); }
+    float2 texture_coordinates() const { return withSelectedChild(composition_impl::GetTextureCoordinates()); }
 };
 
 

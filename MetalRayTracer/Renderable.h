@@ -36,6 +36,21 @@ struct Cylinder {
 #endif
 } __attribute__((swift_private));
 
+struct Cuboid {
+    enum Face {
+        left, right,
+        bottom, top,
+        back, front
+    };
+
+    struct Transform transform;
+    vector_float3 size;
+    size_t material_offset[6];
+#ifdef __cplusplus
+    class HitEnumerator;
+#endif
+} __attribute__((swift_private));
+
 #ifndef __METAL__
 
 static inline matrix_float3x3 quaternion_to_matrix(simd_quatf quat) {

@@ -210,15 +210,15 @@ struct Cylinder: Renderable {
     }
 
     func visitMaterials(_ reserver: inout MaterialReserver) {
-        reserver.accept(bottom)
-        reserver.accept(top)
-        reserver.accept(side)
+        reserver.accept(self.bottom)
+        reserver.accept(self.top)
+        reserver.accept(self.side)
     }
 
     func asImpl(_ encoder: inout MaterialEncoder) -> __Cylinder {
-        let bottomOffset = encoder.encode(bottom)
-        let topOffset = encoder.encode(top)
-        let sideOffset = encoder.encode(side)
+        let bottomOffset = encoder.encode(self.bottom)
+        let topOffset = encoder.encode(self.top)
+        let sideOffset = encoder.encode(self.side)
         return __Cylinder(
             transform: transform.asImpl,
             radius: radius,
@@ -226,6 +226,54 @@ struct Cylinder: Renderable {
             bottom_material_offset: bottomOffset,
             top_material_offset: topOffset,
             side_material_offset: sideOffset
+        )
+    }
+}
+
+extension __Cuboid: RenderableImpl {
+    static var intersectionFunctionName: String { "cuboidIntersectionFunction" }
+}
+
+struct Cuboid: Renderable {
+    var transform: Transform
+    var size: vector_float3
+    var material: any Material
+
+    init(transform: Transform = .init(), size: vector_float3, material: any Material) {
+        self.transform = transform
+        self.size = size
+        self.material = material
+    }
+
+    var boundingBox: MTLAxisAlignedBoundingBox {
+        var result: MTLAxisAlignedBoundingBox = .empty
+        for i in 0..<8 {
+            var p: vector_float3 = .zero
+            if (i & 1 != 0) {
+                p.x = size.x
+            }
+            if (i & 2 != 0) {
+                p.y = size.y
+            }
+            if (i & 4 != 0) {
+                p.z = size.z
+            }
+            let px = transform.rotation.act(p) + transform.translation
+            result.add(px)
+        }
+        return result
+     }
+
+    func visitMaterials(_ reserver: inout MaterialReserver) {
+        reserver.accept(material)
+    }
+
+    func asImpl(_ encoder: inout MaterialEncoder) -> __Cuboid {
+        let mat = encoder.encode(material)
+        return __Cuboid(
+            transform: transform.asImpl,
+            size: size,
+            material_offset: (mat, mat, mat, mat, mat, mat)
         )
     }
 }
@@ -262,6 +310,102 @@ struct Subtract<LHS: Renderable, RHS: Renderable>: Renderable {
     }
 }
 
+struct __UnionImpl<each T: RenderableImpl>: RenderableImpl {
+    var items: (repeat each T)
+
+    private static var count: Int {
+        var result = 0
+        for _ in repeat (each T).self {
+            result += 1
+        }
+        return result
+    }
+
+    static var intersectionFunctionName: String {
+        let suffix = "IntersectionFunction"
+        var result = "union\(Self.count)"
+        for name in repeat (each T).intersectionFunctionName {
+            result += "_\(name.removingSuffix(suffix))"
+        }
+        result += "_\(suffix)"
+        return result
+    }
+}
+
+struct Union<each T: Renderable>: Renderable {
+    var items: (repeat each T)
+
+    init(_ item: repeat each T) {
+        self.items = (repeat (each item))
+    }
+
+    var boundingBox: MTLAxisAlignedBoundingBox {
+        var result: MTLAxisAlignedBoundingBox = .empty
+        for item in repeat (each items) {
+            result.unite(with: item.boundingBox)
+        }
+        return result
+    }
+
+    func visitMaterials(_ reserver: inout MaterialReserver) {
+        for item in repeat (each items) {
+            item.visitMaterials(&reserver)
+        }
+    }
+
+    func asImpl(_ encoder: inout MaterialEncoder) -> __UnionImpl<repeat (each T).Impl> {
+        return __UnionImpl(items: (repeat (each items).asImpl(&encoder)))
+    }
+}
+
+struct __IntersectionImpl<each T: RenderableImpl>: RenderableImpl {
+    var items: (repeat each T)
+
+    private static var count: Int {
+        var result = 0
+        for _ in repeat (each T).self {
+            result += 1
+        }
+        return result
+    }
+
+    static var intersectionFunctionName: String {
+        let suffix = "IntersectionFunction"
+        var result = "intersection\(Self.count)"
+        for name in repeat (each T).intersectionFunctionName {
+            result += "_\(name.removingSuffix(suffix))"
+        }
+        result += "_\(suffix)"
+        return result
+    }
+}
+
+struct Intersection<each T: Renderable>: Renderable {
+    var items: (repeat each T)
+
+    init(_ item: repeat each T) {
+        self.items = (repeat (each item))
+    }
+
+    var boundingBox: MTLAxisAlignedBoundingBox {
+        var result: MTLAxisAlignedBoundingBox = .unlimited
+        for item in repeat (each items) {
+            result.intersect(with: item.boundingBox)
+        }
+        return result
+    }
+
+    func visitMaterials(_ reserver: inout MaterialReserver) {
+        for item in repeat (each items) {
+            item.visitMaterials(&reserver)
+        }
+    }
+
+    func asImpl(_ encoder: inout MaterialEncoder) -> __IntersectionImpl<repeat (each T).Impl> {
+        return __IntersectionImpl(items: (repeat (each items).asImpl(&encoder)))
+    }
+}
+
 extension vector_float3 {
     var asPacked: MTLPackedFloat3 {
         return MTLPackedFloat3Make(self.x, self.y, self.z)
@@ -279,19 +423,50 @@ extension MTLAxisAlignedBoundingBox {
         self.init(min: min.asPacked, max: max.asPacked)
     }
 
+    static var empty: Self {
+        self.init(
+            min: vector_float3(repeating: +Float.infinity),
+            max: vector_float3(repeating: -Float.infinity)
+        )
+    }
+
+    static var unlimited: Self {
+        self.init(
+            min: vector_float3(repeating: -Float.infinity),
+            max: vector_float3(repeating: +Float.infinity)
+        )
+    }
+
     init(_ points: vector_float3...) {
+        self = .empty
+        for p in points {
+            add(p)
+        }
+    }
+
+    init(_ boxes: MTLAxisAlignedBoundingBox...) {
         self.init(
             min: vector_float3(repeating: Float.infinity),
             max: vector_float3(repeating: -Float.infinity)
         )
-        for p in points {
-            add(p)
+        for b in boxes {
+            unite(with: b)
         }
     }
 
     mutating func add(_ point: vector_float3) {
         self.min = simd.min(min.asUnpacked, point).asPacked
         self.max = simd.max(max.asUnpacked, point).asPacked
+    }
+
+    mutating func unite(with box: MTLAxisAlignedBoundingBox) {
+        add(box.min.asUnpacked)
+        add(box.max.asUnpacked)
+    }
+
+    mutating func intersect(with box: MTLAxisAlignedBoundingBox) {
+        self.min = simd.max(min.asUnpacked, box.min.asUnpacked).asPacked
+        self.max = simd.min(max.asUnpacked, box.max.asUnpacked).asPacked
     }
 }
 

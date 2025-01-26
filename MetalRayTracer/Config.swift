@@ -47,7 +47,6 @@ struct CameraConfig: Hashable {
             return RelativePosition(yaw: yaw, pitch: pitch, distance: d)
         }
         set {
-            let d = length(impl.look_from - impl.look_at)
             let y = sin(newValue.pitch * .pi / 180)
             let h = cos(newValue.pitch * .pi / 180)
             let x = h * cos(newValue.yaw * .pi / 180)

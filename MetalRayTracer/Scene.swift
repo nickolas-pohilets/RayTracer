@@ -174,5 +174,40 @@ struct Scene {
             ]
         )
     }
+
+    static var compositionDemo: Scene {
+        let ground = ColoredLambertian(albedo: vector_float3(0.5, 0.5, 0.5))
+
+        let red = ColoredLambertian(albedo: vector_float3(1, 0, 0))
+        let green = ColoredLambertian(albedo: vector_float3(0, 1, 0))
+        let blue = ColoredLambertian(albedo: vector_float3(0, 0, 1))
+
+        let box = Cuboid(
+            transform: .translation(-1, -1, -1),
+            size: vector_float3(2, 2, 2),
+            material: red
+        )
+        let sphere = Sphere(center: .zero, radius: 1.3, material: blue)
+        let cyl1  = Cylinder(transform: .translation(0, -2, 0), radius: 0.55, height: 4, material: green)
+        let cyl2  = Cylinder(transform: .rotation(degrees: 90, axis: .x) * .translation(0, -2, 0), radius: 0.55, height: 4, material: green)
+        let cyl3  = Cylinder(transform: .rotation(degrees: 90, axis: .z) * .translation(0, -2, 0), radius: 0.55, height: 4, material: green)
+
+        let object = Subtract(
+            lhs: Intersection(box, sphere),
+            rhs: Union(cyl1, cyl2, cyl3)
+        )
+
+        return Scene(
+            camera: CameraConfig(
+                verticalFOV: 90,
+                lookFrom: vector_float3(3, 3, 3),
+                lookAt: vector_float3(0, 0, 0)
+            ),
+            objects: [
+                Sphere(center: vector_float3(0, -501, -1), radius: 500.0, material: ground),
+                object,
+            ]
+        )
+    }
 }
 

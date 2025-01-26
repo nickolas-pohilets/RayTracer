@@ -100,6 +100,7 @@ struct SceneView: NSViewRepresentable {
     }
 }
 
+@MainActor
 class Renderer: NSObject, MTKViewDelegate {
     var view: MTKView?
 
@@ -172,6 +173,7 @@ class Renderer: NSObject, MTKViewDelegate {
         self.setNeedsRedraw()
     }
 
+    @MainActor
     private func setNeedsRedraw() {
         passCounter = 0
         view?.isPaused = false
