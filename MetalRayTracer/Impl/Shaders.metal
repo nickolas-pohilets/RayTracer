@@ -155,7 +155,12 @@ BoundingBoxResult intersection(float3 origin,
     for (; e.hasNext(); e.move()) {
         // TODO: Should it be multiplied by vector length?
         float distance = e.t();
-        if (distance >= minDistance && distance <= maxDistance) {
+        bool matches_distance;
+        {
+#pragma METAL fp math_mode(safe)
+            matches_distance = distance >= minDistance && distance <= maxDistance;
+        }
+        if (matches_distance) {
             payload.point = e.point();
             payload.set_normal(e.normal(), direction);
             payload.material_offset = e.material_offset();
@@ -196,6 +201,18 @@ BoundingBoxResult cuboidIntersectionFunction(float3 origin [[origin]],
                                              float maxDistance [[max_distance]],
                                              uint primitiveIndex [[primitive_id]],
                                              device Cuboid const *object [[primitive_data]],
+                                             ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+[[intersection(bounding_box)]]
+BoundingBoxResult quadIntersectionFunction(float3 origin [[origin]],
+                                             float3 direction [[direction]],
+                                             float minDistance [[min_distance]],
+                                             float maxDistance [[max_distance]],
+                                             uint primitiveIndex [[primitive_id]],
+                                             device Quad const *object [[primitive_data]],
                                              ray_data Payload & payload [[payload]])
 {
     return intersection(origin, direction, minDistance, maxDistance, *object, payload);

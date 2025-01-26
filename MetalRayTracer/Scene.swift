@@ -209,5 +209,26 @@ struct Scene {
             ]
         )
     }
-}
 
+    static var quads: Scene {
+        let left = ColoredLambertian(albedo: vector_float3(1.0, 0.2, 0.2))
+        let back = ColoredLambertian(albedo: vector_float3(0.2, 1.0, 0.2))
+        let right = ColoredLambertian(albedo: vector_float3(0.2, 0.2, 1.0))
+        let upper = ColoredLambertian(albedo: vector_float3(1.0, 0.5, 0.0))
+        let lower = ColoredLambertian(albedo: vector_float3(0.2, 0.8, 0.8))
+
+        return Scene(
+            camera: CameraConfig(
+                verticalFOV: 80,
+                lookFrom: vector_float3(0, 0, 9)
+            ),
+            objects: [
+                Quad(origin: vector_float3(-3,-2, 5), u: vector_float3(0, 0,-4), v: vector_float3(0, 4, 0), material: left),
+                Quad(origin: vector_float3(-2,-2, 0), u: vector_float3(4, 0, 0), v: vector_float3(0, 4, 0), material: back),
+                Quad(origin: vector_float3( 3,-2, 1), u: vector_float3(0, 0, 4), v: vector_float3(0, 4, 0), material: right),
+                Quad(origin: vector_float3(-2, 3, 1), u: vector_float3(4, 0, 0), v: vector_float3(0, 0, 4), material: upper),
+                Quad(origin: vector_float3(-2,-3, 5), u: vector_float3(4, 0, 0), v: vector_float3(0, 0,-4), material: lower),
+            ]
+        )
+    }
+}

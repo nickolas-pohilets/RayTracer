@@ -278,6 +278,87 @@ struct Cuboid: Renderable {
     }
 }
 
+extension __Quad: RenderableImpl {
+    static var intersectionFunctionName: String {
+        "quadIntersectionFunction"
+    }
+}
+
+struct Quad: Renderable {
+    var origin: vector_float3
+    var u: vector_float3
+    var v: vector_float3
+    var material: any Material
+
+    init(
+        transform: Transform = .init(),
+        origin: vector_float3 = .init(),
+        u: vector_float3,
+        v: vector_float3,
+        material: any Material
+    ) {
+        self.origin = transform.rotation.act(origin) + transform.translation
+        self.u = transform.rotation.act(u)
+        self.v = transform.rotation.act(v)
+        self.material = material
+    }
+
+    init(
+        transform: Transform = .init(),
+        u: vector_float2,
+        v: vector_float2,
+        material: any Material
+    ) {
+        self.init(
+            transform: transform,
+            origin: .init(),
+            u: vector_float3(u.x, u.y, 0),
+            v: vector_float3(v.x, v.y, 0),
+            material: material
+        )
+    }
+
+    init(
+        transform: Transform = .init(),
+        width: Float,
+        height: Float,
+        material: any Material
+    ) {
+        self.init(
+            transform: transform,
+            origin: .init(),
+            u: vector_float3(width, 0, 0),
+            v: vector_float3(0, height, 0),
+            material: material
+        )
+    }
+
+    typealias Impl = __Quad
+
+    var boundingBox: MTLAxisAlignedBoundingBox {
+        var result: MTLAxisAlignedBoundingBox = .empty
+        result.add(origin)
+        result.add(origin + u)
+        result.add(origin + v)
+        result.add(origin + u + v)
+        return result
+    }
+
+    func visitMaterials(_ reserver: inout MaterialReserver) {
+        reserver.accept(material)
+    }
+
+    func asImpl(_ encoder: inout MaterialEncoder) -> __Quad {
+        let materialOffset = encoder.encode(material)
+        let n = cross(u, v)
+        let lenSq = length_squared(n)
+        let w = n / lenSq
+        let normal = n / lenSq.squareRoot()
+        let d = dot(origin, normal)
+        return __Quad(origin: origin, u: u, v: v, w: w, normal: normal, d: d, material_offset: materialOffset)
+    }
+}
+
 struct __SubtractImpl<LHS: RenderableImpl, RHS: RenderableImpl>: RenderableImpl {
     var lhs: LHS
     var rhs: RHS

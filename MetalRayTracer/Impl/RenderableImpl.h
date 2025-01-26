@@ -392,6 +392,80 @@ public:
     }
 };
 
+class Quad::HitEnumerator {
+    int _index;
+    float _hit[2];
+    float3 _point;
+    float3 _normal;
+    float2 _texture_coordinates;
+    size_t _material_offset;
+public:
+    HitEnumerator(Quad object, Ray3D ray)
+    {
+        float denom = dot(ray.direction, object.normal);
+        float t;
+        bool has_solutions;
+        {
+#pragma METAL fp math_mode(safe)
+            t = (object.d - dot(ray.origin, object.normal)) / denom;
+            has_solutions = isfinite(t);
+        }
+        if (has_solutions) {
+
+            _hit[0] = denom < 0 ? t : -INFINITY;
+            _hit[1] = denom < 0 ? +INFINITY : t;
+
+            _point = ray.at(t);
+            _normal = object.normal;
+            float3 p = _point - object.origin;
+            // p = α * u + β * v
+            // w • (p ⨯ v) = w • (α * (u ⨯ v) + β * (v ⨯ v)) = α * (n / |n|²) • n = α
+            // w • (u ⨯ p) = w • (α * (u ⨯ u) + β * (u ⨯ v)) = β * (n / |n|²) • n = β
+            _texture_coordinates.x = dot(object.w, cross(p, object.v));
+            _texture_coordinates.y = dot(object.w, cross(object.u, p));
+            _material_offset = object.material_offset;
+
+            if (_texture_coordinates.x < 0 || _texture_coordinates.x > 1 || _texture_coordinates.y < 0 || _texture_coordinates.y > 1) {
+                _index = 2;
+            } else {
+                _index = 0;
+            }
+        } else {
+            _index = 2;
+        }
+    }
+
+    bool hasNext() const { return _index < 2; }
+    void move() { _index++; }
+
+    bool isExit() const { return _index == 1; }
+
+    float t() const {
+        assert(hasNext());
+        return _hit[_index];
+    }
+
+    float3 point() const {
+        assert(isfinite(t()));
+        return _point;
+    }
+
+    float3 normal() const {
+        assert(isfinite(t()));
+        return _normal;
+    }
+
+    size_t material_offset() const {
+        assert(isfinite(t()));
+        return _material_offset;
+    }
+
+    float2 texture_coordinates() const {
+        assert(isfinite(t()));
+        return _texture_coordinates;
+    }
+};
+
 template<class... T> struct tuple;
 template<> struct tuple <> {
     enum { size = 0 };
