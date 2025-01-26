@@ -18,7 +18,8 @@ enum MaterialKind {
     material_kind_lambertian_textured,
     material_kind_metal_colored,
     material_kind_metal_textured,
-    material_kind_dielectric
+    material_kind_dielectric,
+    material_kind_emissive_colored
 } __attribute__((enum_extensibility(closed)));
 
 typedef vector_float3 SolidColor;
@@ -56,6 +57,11 @@ struct TexturedMetalMaterial {
 struct DielectricMaterial {
     enum MaterialKind kind;
     float refraction_index;
+} __attribute__((swift_private));
+
+struct ColoredEmissiveMaterial {
+    enum MaterialKind kind;
+    SolidColor albedo;
 } __attribute__((swift_private));
 
 #endif // MATERIALS_H

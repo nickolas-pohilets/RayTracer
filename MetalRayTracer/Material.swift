@@ -114,3 +114,11 @@ public struct Dielectric: Material {
         __DielectricMaterial(kind: .material_kind_dielectric, refraction_index: refractionIndex)
     }
 }
+
+public struct ColoredEmissive: Material {
+    public var albedo: vector_float3
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __ColoredEmissiveMaterial {
+        __ColoredEmissiveMaterial(kind: .material_kind_emissive_colored, albedo: albedo)
+    }
+}

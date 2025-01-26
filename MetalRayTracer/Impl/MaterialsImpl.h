@@ -57,51 +57,67 @@ float3 get_color(ImageTexture texture, vector_float2 coords) {
     return texture.texture.sample(s, coords).rgb;
 }
 
+struct material_result {
+    float3 emitted;
+    float3 attenuation;
+    Ray3D scattered;
+};
+
 template<class LambertianMaterial>
-bool lambertian_scatter(constant LambertianMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+bool lambertian_scatter(constant LambertianMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread material_result & result) {
+    result.emitted = 0;
     while (true) {
         float3 d = payload.normal + rng->random_unit_vector_3d();
         float lenSq = length_squared(d);
         if (lenSq > min_vector_length_squared) {
             float3 direction = d / sqrt(lenSq);
-            scattered = Ray3D(payload.point, direction);
+            result.scattered = Ray3D(payload.point, direction);
             break;
         }
     }
-    attenuation = get_color(material->albedo, payload.texture_coordinates);
+    result.attenuation = get_color(material->albedo, payload.texture_coordinates);
     return true;
 }
 
 template<class MetalMaterial>
-bool metal_scatter(constant MetalMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+bool metal_scatter(constant MetalMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread material_result & result) {
+    result.emitted = 0;
     float3 reflected = reflect(ray.direction, payload.normal) + material->fuzz * rng->random_unit_vector_3d();
     if (dot(reflected, payload.normal) < 0) { return false; }
-    attenuation = get_color(material->albedo, payload.texture_coordinates);
-    scattered = Ray3D(payload.point, normalize(reflected));
+    result.attenuation = get_color(material->albedo, payload.texture_coordinates);
+    result.scattered = Ray3D(payload.point, normalize(reflected));
     return true;
 }
 
-bool dielectric_scatter(constant DielectricMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+bool dielectric_scatter(constant DielectricMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread material_result & result) {
+    result.emitted = 0;
     float ηRatio = payload.face == face::front ? 1.0 / material->refraction_index : material->refraction_index;
     float3 refracted = refract_or_reflect(ray.direction, payload.normal, ηRatio, rng->random_f());
-    attenuation = 1;
-    scattered = Ray3D(payload.point, refracted);
+    result.attenuation = 1;
+    result.scattered = Ray3D(payload.point, refracted);
     return true;
 }
 
-bool scatter(constant void const * material, Ray3D ray, Payload payload, thread RNG* rng, thread float3 & attenuation, thread Ray3D & scattered) {
+bool emissive_scatter(constant ColoredEmissiveMaterial const * material, Ray3D ray, Payload payload, thread RNG* rng, thread material_result & result) {
+    result.emitted = material->albedo;
+    return false;
+}
+
+bool scatter(constant void const * material, Ray3D ray, Payload payload, thread RNG* rng, thread material_result & result) {
     MaterialKind kind = *reinterpret_cast<constant MaterialKind const*>(material);
     switch (kind) {
         case material_kind_lambertian_colored:
-            return lambertian_scatter(reinterpret_cast<constant ColoredLambertianMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+            return lambertian_scatter(reinterpret_cast<constant ColoredLambertianMaterial const *>(material), ray, payload, rng, result);
         case material_kind_lambertian_textured:
-            return lambertian_scatter(reinterpret_cast<constant TexturedLambertianMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+            return lambertian_scatter(reinterpret_cast<constant TexturedLambertianMaterial const *>(material), ray, payload, rng, result);
         case material_kind_metal_colored:
-            return metal_scatter(reinterpret_cast<constant ColoredMetalMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+            return metal_scatter(reinterpret_cast<constant ColoredMetalMaterial const *>(material), ray, payload, rng, result);
         case material_kind_metal_textured:
-            return metal_scatter(reinterpret_cast<constant TexturedMetalMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+            return metal_scatter(reinterpret_cast<constant TexturedMetalMaterial const *>(material), ray, payload, rng, result);
         case material_kind_dielectric:
-            return dielectric_scatter(reinterpret_cast<constant DielectricMaterial const *>(material), ray, payload, rng, attenuation, scattered);
+            return dielectric_scatter(reinterpret_cast<constant DielectricMaterial const *>(material), ray, payload, rng, result);
+        case material_kind_emissive_colored:
+            return emissive_scatter(reinterpret_cast<constant ColoredEmissiveMaterial const *>(material), ray, payload, rng, result);
     }
 }
 

@@ -21,7 +21,8 @@ struct CameraConfig: Hashable {
         lookAt: vector_float3 = [0, 0, -1],
         up: vector_float3 = [0, 1, 0],
         defocusAngle: Float = 0, // Variation angle of rays through each pixel
-        focusDistance: Float? = nil
+        focusDistance: Float? = nil,
+        background: BackgroundLighting = .background_lighting_sky
     ) {
         impl = .init(
             vertical_FOV: verticalFOV,
@@ -29,7 +30,8 @@ struct CameraConfig: Hashable {
             look_at: lookAt,
             up: up,
             defocus_angle: defocusAngle,
-            focus_distance: focusDistance ?? length(lookFrom - lookAt)
+            focus_distance: focusDistance ?? length(lookFrom - lookAt),
+            background: background
         )
     }
 

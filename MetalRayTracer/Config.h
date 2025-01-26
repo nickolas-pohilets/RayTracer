@@ -10,6 +10,11 @@
 
 #include <simd/simd.h>
 
+enum BackgroundLighting {
+    background_lighting_none,
+    background_lighting_sky,
+} __attribute__((enum_extensibility(closed)));
+
 struct CameraConfig {
     float vertical_FOV;
     vector_float3 look_from;
@@ -17,6 +22,7 @@ struct CameraConfig {
     vector_float3 up;
     float defocus_angle;
     float focus_distance;
+    enum BackgroundLighting background;
 } __attribute__((swift_private));
 
 struct RenderConfig {

@@ -70,15 +70,24 @@ public:
 struct world {
     primitive_acceleration_structure acceleration_structure;
     intersection_function_table<triangle_data> function_table;
+    BackgroundLighting background_lighting;
 };
 
-float3 background_color(float3 direction) {
-    auto a = 0.5 * direction.y + 1.0;
-    return (1.0-a) * float3(1.0, 1.0, 1.0) + a * float3(0.5, 0.7, 1.0);
+float3 background_color(BackgroundLighting mode, float3 direction) {
+    switch (mode) {
+        case background_lighting_none: {
+            return float3(0, 0, 0);
+        }
+        case background_lighting_sky: {
+            auto a = 0.5 * direction.y + 1.0;
+            return (1.0-a) * float3(1.0, 1.0, 1.0) + a * float3(0.5, 0.7, 1.0);
+        }
+    }
 }
 
 float3 get_ray_color(ray r, world w, constant uchar const * meterials, thread RNG *rng, uint max_depth) {
     float3 attenuation = 1;
+    float3 color = 0;
     while (max_depth > 0) {
         intersector<triangle_data> intersector;
         Payload payload;
@@ -86,18 +95,19 @@ float3 get_ray_color(ray r, world w, constant uchar const * meterials, thread RN
 
         switch (intersection.type) {
             case intersection_type::none: {
-                return attenuation * background_color(r.direction);
+                return color + attenuation * background_color(w.background_lighting, r.direction);
             }
             case intersection_type::bounding_box: {
                 constant uchar const * material = meterials + payload.material_offset;
                 Ray3D old_ray(r.origin, r.direction);
-                float3 material_attenuation;
-                Ray3D new_ray(0, 0);
-                if (!scatter(material, old_ray, payload, rng, material_attenuation, new_ray)) {
-                    return 0;
+                material_result result = { 0, 0, Ray3D(0, 0) };
+                bool did_scatter = scatter(material, old_ray, payload, rng, result);
+                color += attenuation * result.emitted;
+                if (!did_scatter) {
+                    return color;
                 }
-                attenuation *= material_attenuation;
-                r = ray(new_ray.origin, new_ray.direction, 0.0001);
+                attenuation *= result.attenuation;
+                r = ray(result.scattered.origin, result.scattered.direction, 0.0001);
                 max_depth--;
                 continue;
             }
@@ -125,7 +135,7 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     uint32_t rng_seed_hi = (uint32_t)(render_config.rng_seed >> 32);
     uint32_t rng_seed_lo = (uint32_t)render_config.rng_seed;
     RNG rng(grid_index[0] * 5569 + rng_seed_lo, grid_index[1] * 2707 + rng_seed_hi);
-    world w = { accelerationStructure, functionTable };
+    world w = { accelerationStructure, functionTable, camera_config.background };
 
     float3 color = 0;
     for (uint i = 0; i < render_config.samples_per_pixel; i++) {
