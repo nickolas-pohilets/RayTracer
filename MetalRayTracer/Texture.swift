@@ -57,3 +57,49 @@ class TextureLoader {
 public struct ImageTexture: Hashable {
     var name: String
 }
+
+
+extension PerlinNoiseTexture {
+    static func generate(from color0: vector_float3, to color1: vector_float3, frequency: Float = 1.0, turbulence: Int = 0, using rng: inout some RandomNumberGenerator) -> Self {
+        var result = Self()
+        result.colors = (color0, color1)
+        result.frequency = frequency
+        result.turbulence = UInt32(turbulence)
+        withUnsafeMutableBytes(of: &result.vectors) { buffer in
+            buffer.withMemoryRebound(to: vector_float3.self) { ptr in
+                for i in 0..<ptr.count {
+                    ptr[i] = rng.nextUnitVector()
+                }
+            }
+        }
+        withUnsafeMutableBytes(of: &result.permutations) { buffer in
+            buffer.withMemoryRebound(to: UInt8.self) { ptr in
+                assert(ptr.count == 3 * 256)
+                for i in 0..<256 {
+                    ptr[i] = UInt8(i)
+                    ptr[256 + i] = UInt8(i)
+                    ptr[512 + i] = UInt8(i)
+                }
+                for i in 0..<3 {
+                    var px = UnsafeMutableBufferPointer(start: ptr.baseAddress! + 256 * i, count: 256)
+                    px.shuffle(using: &rng)
+                }
+            }
+        }
+        return result
+    }
+}
+
+extension RandomNumberGenerator {
+    mutating func nextUnitVector() -> vector_float3 {
+        while (true) {
+            var x = Float.random(in: -1...1, using: &self)
+            var y = Float.random(in: -1...1, using: &self)
+            var z = Float.random(in: -1...1, using: &self)
+            var v = vector_float3(x, y, z)
+            if length_squared(v) <= 1 {
+                return v
+            }
+        }
+    }
+}

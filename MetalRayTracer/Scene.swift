@@ -217,11 +217,13 @@ struct Scene {
         let upper = ColoredLambertian(albedo: vector_float3(1.0, 0.5, 0.0))
         let lower = ColoredLambertian(albedo: vector_float3(0.2, 0.8, 0.8))
 
+        var rng = SystemRandomNumberGenerator()
+
         return Scene(
             camera: CameraConfig(
                 verticalFOV: 80,
                 lookFrom: vector_float3(0, 0, 9),
-                background: .background_lighting_none
+                background: .background_lighting_sky
             ),
             objects: [
                 Quad(origin: vector_float3(-3,-2, 5), u: vector_float3(0, 0,-4), v: vector_float3(0, 4, 0), material: left),
@@ -229,7 +231,19 @@ struct Scene {
                 Quad(origin: vector_float3( 3,-2, 1), u: vector_float3(0, 0, 4), v: vector_float3(0, 4, 0), material: right),
                 Quad(origin: vector_float3(-2, 3, 1), u: vector_float3(4, 0, 0), v: vector_float3(0, 0, 4), material: upper),
                 Quad(origin: vector_float3(-2,-3, 5), u: vector_float3(4, 0, 0), v: vector_float3(0, 0,-4), material: lower),
-                Sphere(center: vector_float3(0, 0, 2), radius: 1, material: ColoredLambertian(albedo: vector_float3(1.0, 1.0, 1.0))),
+                Sphere(
+                    center: vector_float3(0, 0, 2),
+                    radius: 1,
+                    material: PerlinNoiseLambertian(
+                        albedo: .generate(
+                            from: vector_float3(0, 0, 0),
+                            to: vector_float3(1, 1, 1),
+                            frequency: 4,
+                            turbulence: 5,
+                            using: &rng
+                        )
+                    )
+                ),
                 ConstantDensityVolume(
                     base: Cuboid(
                         transform: .translation(-3, -3, 0),

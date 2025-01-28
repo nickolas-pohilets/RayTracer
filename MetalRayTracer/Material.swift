@@ -87,6 +87,18 @@ public struct TexturedLambertian: Material {
     }
 }
 
+public struct PerlinNoiseLambertian: Material {
+    public var albedo: PerlinNoiseTexture
+
+    public init(albedo: PerlinNoiseTexture) {
+        self.albedo = albedo
+    }
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __PerlinNoiseLambertianMaterial {
+        return __PerlinNoiseLambertianMaterial(kind: .material_kind_lambertian_perlin_noise, albedo: albedo)
+    }
+}
+
 public struct ColoredMetal: Material {
     public var albedo: vector_float3
     public var fuzz: Float
@@ -99,6 +111,38 @@ public struct ColoredMetal: Material {
 
     public func asImpl(_ encoder: inout MaterialEncoder) -> __ColoredMetalMaterial {
         __ColoredMetalMaterial(kind: .material_kind_metal_colored, albedo: albedo, fuzz: fuzz)
+    }
+}
+
+public struct TexturedMetal: Material {
+    public var albedo: ImageTexture
+    public var fuzz: Float
+
+    public init(albedo: ImageTexture, fuzz: Float) {
+        assert((0...1).contains(fuzz))
+        self.albedo = albedo
+        self.fuzz = fuzz
+    }
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __TexturedMetalMaterial {
+        let metalTexture = encoder.textureLoader.load(albedo)
+        let texture = __ImageTexture(texture_ptr: metalTexture.gpuResourceID)
+        return __TexturedMetalMaterial(kind: .material_kind_metal_textured, albedo: texture, fuzz: fuzz)
+    }
+}
+
+public struct PerlinNoiseMetal: Material {
+    public var albedo: PerlinNoiseTexture
+    public var fuzz: Float
+
+    public init(albedo: PerlinNoiseTexture, fuzz: Float) {
+        assert((0...1).contains(fuzz))
+        self.albedo = albedo
+        self.fuzz = fuzz
+    }
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __PerlinNoiseMetalMaterial {
+        return __PerlinNoiseMetalMaterial(kind: .material_kind_metal_perlin_noise, albedo: albedo, fuzz: fuzz)
     }
 }
 
