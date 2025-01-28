@@ -158,6 +158,18 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     color_buffer.write(float4(sqrt(total_color), 1.0), grid_index);
 }
 
+kernel void perlin_noise_kernel(texture2d<float, access::write> color_buffer [[texture(kernel_buffer_output_texture)]],
+                                uint2 grid_index [[thread_position_in_grid]],
+                                constant RenderConfig const &render_config [[buffer(kernel_buffer_render_config)]],
+                                constant PerlinNoiseTexture const & texture [[buffer(kernel_buffer_acceleration_structure)]]) {
+    uint32_t rng_seed_hi = (uint32_t)(render_config.rng_seed >> 32);
+    uint32_t rng_seed_lo = (uint32_t)render_config.rng_seed;
+    RNG rng(grid_index[0] * 5569 + rng_seed_lo, grid_index[1] * 2707 + rng_seed_hi);
+
+    float3 color = get_color(texture, vector_float2(0, 0), vector_float3(grid_index.x, grid_index.y, 0));
+    color_buffer.write(float4(color, 1.0), grid_index);
+}
+
 template<class T>
 auto get_hit_enumerator(device T const & object, Ray3D ray, thread RNG * rng) -> decltype(typename T::HitEnumerator(object, ray)) {
     return typename T::HitEnumerator(object, ray);

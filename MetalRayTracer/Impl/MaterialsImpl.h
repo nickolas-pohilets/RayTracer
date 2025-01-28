@@ -61,8 +61,16 @@ uchar perlin_hash(constant PerlinNoiseTexture const & tex, uchar x, uchar y, uch
     return tex.permutations[2][(tex.permutations[1][(tex.permutations[0][x] + y) & 255] + z) & 255];
 }
 
-float smoothstep(float t) {
+float smoothstep5(float t) {
     return t * t * t * (t * (6.0f * t - 15.0f) + 10.0f);
+}
+
+float smoothstep3(float t) {
+    return t * t * (3.0f - 2.0f * t);
+}
+
+float smoothstep1(float t) {
+    return t;
 }
 
 float perlin_noise(constant PerlinNoiseTexture const & tex, float3 p) {
@@ -80,9 +88,9 @@ float perlin_noise(constant PerlinNoiseTexture const & tex, float3 p) {
     float ty = p.y - floor(p.y);
     float tz = p.z - floor(p.z);
 
-    float u = smoothstep(tx);
-    float v = smoothstep(ty);
-    float w = smoothstep(tz);
+    float u = smoothstep3(tx);
+    float v = smoothstep3(ty);
+    float w = smoothstep3(tz);
 
     // gradients at the corner of the cell
     float3 c000 = tex.vectors[perlin_hash(tex, xi0, yi0, zi0)];
@@ -123,7 +131,7 @@ float perlin_noise(constant PerlinNoiseTexture const & tex, float3 p) {
 float3 get_color(constant PerlinNoiseTexture const & texture, vector_float2 coords, vector_float3 point) {
     auto t = 0.0;
     if (texture.turbulence == 0) {
-        t = 1.0 + perlin_noise(texture, point * texture.frequency);
+        t = (1.0 + perlin_noise(texture, point * texture.frequency)) * 0.5;
     } else {
         auto f = texture.frequency;
         auto weight = 1.0;
@@ -133,8 +141,14 @@ float3 get_color(constant PerlinNoiseTexture const & texture, vector_float2 coor
             weight *= 0.5;
             f *= 2;
         }
-        t = fabs(t);
+        t = 0.5 + 1 * t;
     }
+    t = fmax(0, fmin(1, t));
+//    if (t < 0.5) {
+//        return mix(float3(0, 0, 1), float3(0, 1, 0), 2 * t);
+//    } else {
+//        return mix(float3(0, 1, 0), float3(1, 0, 0), 2 * t - 1);
+//    }
     return mix(texture.colors[0], texture.colors[1], t);
 }
 

@@ -113,13 +113,22 @@ class Renderer: NSObject, MTKViewDelegate {
     }
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
-    var sceneBuffers: SceneBuffers
+    //var sceneBuffers: SceneBuffers
     var pipeline: MTLComputePipelineState
-    var intersectionFunctionsTable: any MTLIntersectionFunctionTable
+    //var intersectionFunctionsTable: any MTLIntersectionFunctionTable
     var passCounter: Int = 0
-    var accumulator: MTLTexture?
+    //var accumulator: MTLTexture?
+
+    var noise: UnsafeMutablePointer<PerlinNoiseTexture> {
+        return noiseBuffer.contents().bindMemory(to: PerlinNoiseTexture.self, capacity: 1)
+    }
+    let noiseBuffer: any MTLBuffer
+
+    let rotations: [simd_quatf]
 
     init(_ scene: Scene) {
+
+        var rng = SystemRandomNumberGenerator()
 
         self.scene = scene
         if let device = MTLCreateSystemDefaultDevice() {
@@ -127,46 +136,57 @@ class Renderer: NSObject, MTKViewDelegate {
         }
         self.commandQueue = device.makeCommandQueue()
 
-        sceneBuffers = SceneBuffers(scene: scene, device: device, commandQueue: commandQueue)
+        self.noiseBuffer = device.makeBuffer(length: MemoryLayout<PerlinNoiseTexture>.stride)!
+
+        //sceneBuffers = SceneBuffers(scene: scene, device: device, commandQueue: commandQueue)
 
         let lib = device.makeDefaultLibrary()!
-        let kernel = lib.makeFunction(name: "ray_tracing_kernel")!
+        let kernel = lib.makeFunction(name: "perlin_noise_kernel")!
 
         // Load functions from Metal library
-        let functions = sceneBuffers.intersectionFunctions.mapValues { name in
-            lib.makeFunction(name: name)!
-        }
-        let functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
-
-        // Attach functions to ray tracing compute pipeline descriptor
-        let linkedFunctions = MTLLinkedFunctions()
-        linkedFunctions.functions = Array(functions.values)
+//        let functions = sceneBuffers.intersectionFunctions.mapValues { name in
+//            lib.makeFunction(name: name)!
+//        }
+//        let functionsTableSize = functions.keys.max().map { $0 + 1 } ?? 0
+//
+//        // Attach functions to ray tracing compute pipeline descriptor
+//        let linkedFunctions = MTLLinkedFunctions()
+//        linkedFunctions.functions = Array(functions.values)
 
         let pipelineDescriptor = MTLComputePipelineDescriptor()
         pipelineDescriptor.computeFunction = kernel
-        pipelineDescriptor.linkedFunctions = linkedFunctions
+  //      pipelineDescriptor.linkedFunctions = linkedFunctions
 
         self.pipeline = try! device.makeComputePipelineState(descriptor: pipelineDescriptor, options: [], reflection: nil)
 
-        do {
-            // Allocate intersection function table
-            let descriptor = MTLIntersectionFunctionTableDescriptor()
-            descriptor.functionCount = functionsTableSize
+//        do {
+//            // Allocate intersection function table
+//            let descriptor = MTLIntersectionFunctionTableDescriptor()
+//            descriptor.functionCount = functionsTableSize
+//
+//            let functionTable = pipeline.makeIntersectionFunctionTable(descriptor: descriptor)!
+//            for i in 0..<functionsTableSize {
+//                guard let f = functions[i] else { continue }
+//                // Get a handle to the linked intersection function in the pipeline state
+//                let functionHandle = pipeline.functionHandle(function: f)
+//
+//                // Insert the function handle into the table
+//                functionTable.setFunction(functionHandle, index: i)
+//            }
+//
+//            self.intersectionFunctionsTable = functionTable
+//        }
 
-            let functionTable = pipeline.makeIntersectionFunctionTable(descriptor: descriptor)!
-            for i in 0..<functionsTableSize {
-                guard let f = functions[i] else { continue }
-                // Get a handle to the linked intersection function in the pipeline state
-                let functionHandle = pipeline.functionHandle(function: f)
-
-                // Insert the function handle into the table
-                functionTable.setFunction(functionHandle, index: i)
-            }
-
-            self.intersectionFunctionsTable = functionTable
+        self.rotations = (0..<PerlinNoiseTexture.tableSize).map { _ in
+            let v1 = rng.nextUnitVector()
+            let v2 = rng.nextUnitVector()
+            let q = simd_quatf(from: v1, to: v2)
+            return q
         }
 
         super.init()
+
+        noise.pointee = .generate(from: vector_float3(0, 0, 0), to: vector_float3(1, 0, 0), frequency: 0.005, turbulence: 3, using: &rng)
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -185,9 +205,13 @@ class Renderer: NSObject, MTKViewDelegate {
         }
 
         passCounter += 1
-        if passCounter >= 200 {
-            view.isPaused = true
-        }
+//        if passCounter >= 200 {
+//            view.isPaused = true
+//        }
+
+        var rng = SystemRandomNumberGenerator()
+        //noise.pointee.animateRandom(speed: 0.1, using: &rng)
+        noise.pointee.animateRotating(speed: 0.01, rotations: self.rotations)
 
         let commandBuffer = commandQueue.makeCommandBuffer()!
 
@@ -195,19 +219,21 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setComputePipelineState(pipeline)
         let outputTexture = drawable.texture
         renderEncoder.setTexture(outputTexture, index: Int(kernel_buffers.output_texture.rawValue))
-        renderEncoder.setTexture(getAccumulatorTexture(width: outputTexture.width, height: outputTexture.height), index: Int(kernel_buffers.accumulator_texture.rawValue))
-        var camera = scene.camera
-        renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: Int(kernel_buffers.camera_config.rawValue))
-        var rng = SystemRandomNumberGenerator()
+        //renderEncoder.setTexture(getAccumulatorTexture(width: outputTexture.width, height: outputTexture.height), index: Int(kernel_buffers.accumulator_texture.rawValue))
+//        var camera = scene.camera
+//        renderEncoder.setBytes(&camera, length: MemoryLayout<CameraConfig>.stride, index: Int(kernel_buffers.camera_config.rawValue))
+        //var rng = SystemRandomNumberGenerator()
         var renderConfig = RenderConfig(samplesPerPixel: 1, maxDepth: 10, passCounter: passCounter, rngSeed: rng.next())
         renderEncoder.setBytes(&renderConfig, length: MemoryLayout<RenderConfig>.stride, index: Int(kernel_buffers.render_config.rawValue))
-        renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: Int(kernel_buffers.acceleration_structure.rawValue))
-        renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: Int(kernel_buffers.function_table.rawValue))
-        renderEncoder.setBuffer(sceneBuffers.materialsBuffer, offset: 0, index: Int(kernel_buffers.materials.rawValue))
 
-        for texture in sceneBuffers.textureLoader.textures.values {
-            renderEncoder.useResource(texture, usage: .read)
-        }
+        renderEncoder.setBuffer(noiseBuffer, offset: 0, index: Int(kernel_buffers.acceleration_structure.rawValue))
+//        renderEncoder.setAccelerationStructure(sceneBuffers.accelerationStructure, bufferIndex: Int(kernel_buffers.acceleration_structure.rawValue))
+//        renderEncoder.setIntersectionFunctionTable(intersectionFunctionsTable, bufferIndex: Int(kernel_buffers.function_table.rawValue))
+//        renderEncoder.setBuffer(sceneBuffers.materialsBuffer, offset: 0, index: Int(kernel_buffers.materials.rawValue))
+
+//        for texture in sceneBuffers.textureLoader.textures.values {
+//            renderEncoder.useResource(texture, usage: .read)
+//        }
 
         let threadGroupWidth = pipeline.threadExecutionWidth
         let threadGroupHeight = pipeline.maxTotalThreadsPerThreadgroup / threadGroupWidth
@@ -223,14 +249,14 @@ class Renderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
     }
 
-    func getAccumulatorTexture(width: Int, height: Int) -> MTLTexture {
-        if let accumulator, accumulator.width == width, accumulator.height == height {
-            return accumulator
-        }
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgb10a2Uint, width: width, height: height, mipmapped: false)
-        descriptor.usage = [.shaderRead, .shaderWrite]
-        let texture = device.makeTexture(descriptor: descriptor)!
-        self.accumulator = texture
-        return texture
-    }
+//    func getAccumulatorTexture(width: Int, height: Int) -> MTLTexture {
+//        if let accumulator, accumulator.width == width, accumulator.height == height {
+//            return accumulator
+//        }
+//        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgb10a2Uint, width: width, height: height, mipmapped: false)
+//        descriptor.usage = [.shaderRead, .shaderWrite]
+//        let texture = device.makeTexture(descriptor: descriptor)!
+//        self.accumulator = texture
+//        return texture
+//    }
 }

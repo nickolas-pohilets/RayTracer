@@ -60,16 +60,16 @@ public struct ImageTexture: Hashable {
 
 
 extension PerlinNoiseTexture {
+    static var tableSize: Int { 256 }
+
     static func generate(from color0: vector_float3, to color1: vector_float3, frequency: Float = 1.0, turbulence: Int = 0, using rng: inout some RandomNumberGenerator) -> Self {
         var result = Self()
         result.colors = (color0, color1)
         result.frequency = frequency
         result.turbulence = UInt32(turbulence)
-        withUnsafeMutableBytes(of: &result.vectors) { buffer in
-            buffer.withMemoryRebound(to: vector_float3.self) { ptr in
-                for i in 0..<ptr.count {
-                    ptr[i] = rng.nextUnitVector()
-                }
+        result.withVectors { ptr in
+            for i in 0..<ptr.count {
+                ptr[i] = rng.nextUnitVector()
             }
         }
         withUnsafeMutableBytes(of: &result.permutations) { buffer in
@@ -88,17 +88,59 @@ extension PerlinNoiseTexture {
         }
         return result
     }
+
+    mutating func animateRandom(speed: Float, using rng: inout some RandomNumberGenerator) {
+        withVectors { ptr in
+            for i in 0..<ptr.count {
+                let v = ptr[i]
+                while true {
+                    var d = rng.nextUnitVector()
+                    let common = dot(d, v)
+                    if abs(common) > 1 - 1e-6 {
+                        continue
+                    }
+                    d = normalize(d - v * common)
+                    ptr[i] = normalize(v + d * speed)
+                    break
+                }
+            }
+        }
+    }
+
+    mutating func animateRotating(speed: Float, rotations: [simd_quatf]) {
+        assert(rotations.count == Self.tableSize)
+        withVectors { ptr in
+            for i in 0..<ptr.count {
+                let q = rotations[i];
+                let qi = simd_slerp(.identity, q, speed)
+                let v1 = ptr[i]
+                let v2 = qi.act(v1)
+                ptr[i] = v2
+            }
+        }
+
+    }
+
+    private mutating func withVectors<R>(_ block: (UnsafeMutableBufferPointer<vector_float3>) -> R) -> R {
+        withUnsafeMutableBytes(of: &vectors) { buffer in
+            buffer.withMemoryRebound(to: vector_float3.self) { ptr in
+                assert(ptr.count == Self.tableSize)
+                return block(ptr)
+            }
+        }
+    }
 }
 
 extension RandomNumberGenerator {
     mutating func nextUnitVector() -> vector_float3 {
         while (true) {
-            var x = Float.random(in: -1...1, using: &self)
-            var y = Float.random(in: -1...1, using: &self)
-            var z = Float.random(in: -1...1, using: &self)
-            var v = vector_float3(x, y, z)
-            if length_squared(v) <= 1 {
-                return v
+            let x = Float.random(in: -1...1, using: &self)
+            let y = Float.random(in: -1...1, using: &self)
+            let z = Float.random(in: -1...1, using: &self)
+            let v = vector_float3(x, y, z)
+            let vLenSq = length_squared(v)
+            if vLenSq <= 1 {
+                return v / vLenSq.squareRoot()
             }
         }
     }
