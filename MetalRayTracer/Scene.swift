@@ -223,7 +223,7 @@ struct Scene {
             camera: CameraConfig(
                 verticalFOV: 80,
                 lookFrom: vector_float3(0, 0, 9),
-                background: .background_lighting_sky
+                background: .background_lighting_none
             ),
             objects: [
                 Quad(origin: vector_float3(-3,-2, 5), u: vector_float3(0, 0,-4), v: vector_float3(0, 4, 0), material: left),
@@ -250,7 +250,7 @@ struct Scene {
                         size: vector_float3(6, 3, 5),
                         material: ColoredIsotropic(albedo: vector_float3(1.0, 1.0, 0.0))
                     ),
-                    density: 0.2
+                    density: 0.5
                 )
             ]
         )

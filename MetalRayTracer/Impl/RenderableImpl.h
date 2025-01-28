@@ -714,19 +714,19 @@ public:
     float2 texture_coordinates() const { return withSelectedChild(composition_impl::GetTextureCoordinates()); }
 };
 
-template<class R>
+template<class Impl>
 class ConstantDensityVolume {
-    R _impl;
-    float density;
+    Impl _impl;
+    float _density;
 public:
-    ConstantDensityVolume(R impl): _impl(impl) {}
+    ConstantDensityVolume(Impl impl, float density): _impl(impl), _density(density) {}
 
     class HitEnumerator;
 };
 
-template<class R>
-class ConstantDensityVolume<R>::HitEnumerator {
-    typename R::HitEnumerator _impl;
+template<class Impl>
+class ConstantDensityVolume<Impl>::HitEnumerator {
+    typename Impl::HitEnumerator _impl;
     Ray3D _ray;
     thread RNG *_rng;
     float _neg_inv_density;
@@ -735,7 +735,11 @@ class ConstantDensityVolume<R>::HitEnumerator {
     HitInfo _hit;
 
     void scan() {
-        while (_impl.hasNext()) {
+        while (true) {
+            if (!_impl.hasNext()) {
+                _exit = true;
+                break;
+            }
             assert(!_impl.isExit());
             float t1 = max(0.0f, _impl.t());
             size_t material = _impl.material_offset();
@@ -765,12 +769,14 @@ class ConstantDensityVolume<R>::HitEnumerator {
             }
             if (_impl.hasNext()) {
                 _impl.move();
+            } else {
+                _exit = true;
+                break;
             }
         }
-        _exit = true;
     }
 public:
-    HitEnumerator(ConstantDensityVolume<R> object, Ray3D ray, thread RNG* rng) : _impl(object._impl, ray), _ray(ray), _rng(rng), _neg_inv_density(-1/object.density)
+    HitEnumerator(ConstantDensityVolume<Impl> object, Ray3D ray, thread RNG* rng) : _impl(object._impl, ray), _ray(ray), _rng(rng), _neg_inv_density(-1/object._density)
     {
         scan();
     }
@@ -786,7 +792,9 @@ public:
     }
 
     bool isExit() const { return _exit; }
-    float t() const { return _exit ? _impl.t() : _t; }
+    float t() const {
+        return _exit ? _impl.t() : _t;
+    }
     float3 point() const { return _exit ? _impl.point() : _hit.point; }
     float3 normal() const { return _exit ? _impl.normal() : _hit.normal; }
     size_t material_offset() const { return _exit ? _impl.material_offset() : _hit.material_offset; }

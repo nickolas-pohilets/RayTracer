@@ -12,14 +12,29 @@
 
 constant float const min_vector_length_squared = 1e-24;
 
+#ifdef USE_TEST_RNG
+class RNG {
+    std::vector<float> _values;
+    size_t _index;
+public:
+    RNG(std::vector<float> values): _values(std::move(values)), _index(0) {}
+
+    float random_f() {
+        float result = _values[_index];
+        _index++;
+        _index = _index % _values.size();
+        return result;
+    }
+#else
+// PCG32
 // See https://www.pcg-random.org/
-class pcg32 {
+class RNG {
     // RNG state.  All values are possible.
     uint64_t state;
     // Controls which RNG sequence (stream) is selected. Must *always* be odd.
     uint64_t inc;
 public:
-    pcg32(uint64_t initstate, uint64_t initseq)
+    RNG(uint64_t initstate, uint64_t initseq)
     {
         state = 0U;
         inc = (initseq << 1u) | 1u;
@@ -39,6 +54,7 @@ public:
     float random_f() {
         return ldexp(float(random_u32()), -32);
     }
+#endif
 
     float2 random_unit_vector_2d() {
         while (true) {
@@ -72,7 +88,5 @@ public:
         }
     }
 };
-
-typedef pcg32 RNG;
 
 #endif // RNG_H
