@@ -14,7 +14,7 @@ enum class face {
     back
 };
 
-struct Payload {
+struct HitInfo {
     float3 point;
     float3 normal;
     face face;

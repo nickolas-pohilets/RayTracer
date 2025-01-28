@@ -122,3 +122,11 @@ public struct ColoredEmissive: Material {
         __ColoredEmissiveMaterial(kind: .material_kind_emissive_colored, albedo: albedo)
     }
 }
+
+public struct ColoredIsotropic: Material {
+    public var albedo: vector_float3
+
+    public func asImpl(_ encoder: inout MaterialEncoder) -> __ColoredIsotropicMaterial {
+        __ColoredIsotropicMaterial(kind: .material_kind_isotropic_colored, albedo: albedo)
+    }
+}

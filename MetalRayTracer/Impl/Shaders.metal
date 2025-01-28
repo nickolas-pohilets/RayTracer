@@ -85,23 +85,29 @@ float3 background_color(BackgroundLighting mode, float3 direction) {
     }
 }
 
+struct Payload {
+    RNG rng;
+    HitInfo hit;
+};
+
 float3 get_ray_color(ray r, world w, constant uchar const * meterials, thread RNG *rng, uint max_depth) {
     float3 attenuation = 1;
     float3 color = 0;
     while (max_depth > 0) {
         intersector<triangle_data> intersector;
-        Payload payload;
+        Payload payload = { *rng };
         intersection_result<triangle_data> intersection = intersector.intersect(r, w.acceleration_structure, w.function_table, payload);
+        *rng = payload.rng;
 
         switch (intersection.type) {
             case intersection_type::none: {
                 return color + attenuation * background_color(w.background_lighting, r.direction);
             }
             case intersection_type::bounding_box: {
-                constant uchar const * material = meterials + payload.material_offset;
+                constant uchar const * material = meterials + payload.hit.material_offset;
                 Ray3D old_ray(r.origin, r.direction);
                 material_result result = { 0, 0, Ray3D(0, 0) };
-                bool did_scatter = scatter(material, old_ray, payload, rng, result);
+                bool did_scatter = scatter(material, old_ray, payload.hit, rng, result);
                 color += attenuation * result.emitted;
                 if (!did_scatter) {
                     return color;
@@ -152,6 +158,16 @@ kernel void ray_tracing_kernel(texture2d<float, access::write> color_buffer [[te
     color_buffer.write(float4(sqrt(total_color), 1.0), grid_index);
 }
 
+template<class T>
+auto get_hit_enumerator(device T const & object, Ray3D ray, thread RNG * rng) -> decltype(typename T::HitEnumerator(object, ray)) {
+    return typename T::HitEnumerator(object, ray);
+}
+
+template<class T>
+auto get_hit_enumerator(device T const & object, Ray3D ray, thread RNG * rng) -> decltype(typename T::HitEnumerator(object, ray, rng)) {
+    return typename T::HitEnumerator(object, ray, rng);
+}
+
 template<typename T>
 BoundingBoxResult intersection(float3 origin,
                                float3 direction,
@@ -161,7 +177,8 @@ BoundingBoxResult intersection(float3 origin,
                                ray_data Payload & payload)
 {
     Ray3D ray(origin, direction);
-    typename T::HitEnumerator e(object, ray);
+    RNG rng = payload.rng;
+    auto e = get_hit_enumerator(object, ray, &rng);
     for (; e.hasNext(); e.move()) {
         // TODO: Should it be multiplied by vector length?
         float distance = e.t();
@@ -171,15 +188,21 @@ BoundingBoxResult intersection(float3 origin,
             matches_distance = distance >= minDistance && distance <= maxDistance;
         }
         if (matches_distance) {
-            payload.point = e.point();
-            payload.set_normal(e.normal(), direction);
-            payload.material_offset = e.material_offset();
-            payload.texture_coordinates = e.texture_coordinates();
+            payload.hit.point = e.point();
+            payload.hit.set_normal(e.normal(), direction);
+            payload.hit.material_offset = e.material_offset();
+            payload.hit.texture_coordinates = e.texture_coordinates();
+
+            payload.rng = rng;
             return { true, distance };
         }
     }
+
+    payload.rng = rng;
     return { false, 0.0f };
 }
+
+// MARK: - Primitives
 
 [[intersection(bounding_box)]]
 BoundingBoxResult sphereIntersectionFunction(float3 origin [[origin]],
@@ -227,6 +250,8 @@ BoundingBoxResult quadIntersectionFunction(float3 origin [[origin]],
 {
     return intersection(origin, direction, minDistance, maxDistance, *object, payload);
 }
+
+// MARK: - CSG Operations
 
 [[intersection(bounding_box)]]
 BoundingBoxResult subtract_cylinder_cylinder_IntersectionFunction(float3 origin [[origin]],
@@ -310,6 +335,21 @@ BoundingBoxResult subtract_intersection2_cuboid_sphere__union3_cylinder_cylinder
     float maxDistance [[max_distance]],
     uint primitiveIndex [[primitive_id]],
     device Subtract<Intersection<Cuboid, Sphere>, Union<Cylinder, Cylinder, Cylinder>> const *object [[primitive_data]],
+    ray_data Payload & payload [[payload]])
+{
+    return intersection(origin, direction, minDistance, maxDistance, *object, payload);
+}
+
+// MARK: - Constant Density Volumes
+
+[[intersection(bounding_box)]]
+BoundingBoxResult cdv_cuboid_IntersectionFunction(
+    float3 origin [[origin]],
+    float3 direction [[direction]],
+    float minDistance [[min_distance]],
+    float maxDistance [[max_distance]],
+    uint primitiveIndex [[primitive_id]],
+    device ConstantDensityVolume<Cuboid> const *object [[primitive_data]],
     ray_data Payload & payload [[payload]])
 {
     return intersection(origin, direction, minDistance, maxDistance, *object, payload);

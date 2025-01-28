@@ -229,6 +229,15 @@ struct Scene {
                 Quad(origin: vector_float3( 3,-2, 1), u: vector_float3(0, 0, 4), v: vector_float3(0, 4, 0), material: right),
                 Quad(origin: vector_float3(-2, 3, 1), u: vector_float3(4, 0, 0), v: vector_float3(0, 0, 4), material: upper),
                 Quad(origin: vector_float3(-2,-3, 5), u: vector_float3(4, 0, 0), v: vector_float3(0, 0,-4), material: lower),
+                Sphere(center: vector_float3(0, 0, 2), radius: 1, material: ColoredLambertian(albedo: vector_float3(1.0, 1.0, 1.0))),
+                ConstantDensityVolume(
+                    base: Cuboid(
+                        transform: .translation(-3, -3, 0),
+                        size: vector_float3(6, 3, 5),
+                        material: ColoredIsotropic(albedo: vector_float3(1.0, 1.0, 0.0))
+                    ),
+                    density: 0.2
+                )
             ]
         )
     }

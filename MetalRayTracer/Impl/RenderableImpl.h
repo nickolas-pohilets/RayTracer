@@ -714,5 +714,84 @@ public:
     float2 texture_coordinates() const { return withSelectedChild(composition_impl::GetTextureCoordinates()); }
 };
 
+template<class R>
+class ConstantDensityVolume {
+    R _impl;
+    float density;
+public:
+    ConstantDensityVolume(R impl): _impl(impl) {}
+
+    class HitEnumerator;
+};
+
+template<class R>
+class ConstantDensityVolume<R>::HitEnumerator {
+    typename R::HitEnumerator _impl;
+    Ray3D _ray;
+    thread RNG *_rng;
+    float _neg_inv_density;
+    bool _exit;
+    float _t;
+    HitInfo _hit;
+
+    void scan() {
+        while (_impl.hasNext()) {
+            assert(!_impl.isExit());
+            float t1 = max(0.0f, _impl.t());
+            size_t material = _impl.material_offset();
+            float2 tex = _impl.texture_coordinates();
+
+            _impl.move();
+            float t2;
+            if (_impl.hasNext()) {
+                assert(_impl.isExit());
+                t2 = _impl.t();
+            } else {
+                t2 = +INFINITY;
+            }
+
+            if (t1 < t2) {
+                float t = t1 + log(1 - _rng->random_f()) * _neg_inv_density;
+                if (t <= t2) {
+                    _exit = false;
+                    _t = t;
+                    _hit.point = _ray.at(t);
+                    _hit.normal = -_ray.direction;
+                    _hit.face = face::front;
+                    _hit.material_offset = material;
+                    _hit.texture_coordinates = tex;
+                    break;
+                }
+            }
+            if (_impl.hasNext()) {
+                _impl.move();
+            }
+        }
+        _exit = true;
+    }
+public:
+    HitEnumerator(ConstantDensityVolume<R> object, Ray3D ray, thread RNG* rng) : _impl(object._impl, ray), _ray(ray), _rng(rng), _neg_inv_density(-1/object.density)
+    {
+        scan();
+    }
+
+    bool hasNext() const { return !_exit || _impl.hasNext(); }
+    void move() {
+        if (_exit) {
+            _impl.move();
+            scan();
+        } else {
+            _exit = true;
+        }
+    }
+
+    bool isExit() const { return _exit; }
+    float t() const { return _exit ? _impl.t() : _t; }
+    float3 point() const { return _exit ? _impl.point() : _hit.point; }
+    float3 normal() const { return _exit ? _impl.normal() : _hit.normal; }
+    size_t material_offset() const { return _exit ? _impl.material_offset() : _hit.material_offset; }
+    float2 texture_coordinates() const { return _exit ? _impl.texture_coordinates() : _hit.texture_coordinates; }
+};
+
 
 #endif // RENDERABLE_IMPL_H
